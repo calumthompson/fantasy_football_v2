@@ -2,8 +2,18 @@ import pandas as pd
 import pulp
 
 
-def create_optimal_team(data: pd.DataFrame, target_column: str) -> pd.DataFrame:
-    """Return the highest-scoring valid FPL squad within a £100m budget."""
+def create_optimal_team(
+    data: pd.DataFrame,
+    target_column: str,
+    excluded_player_names: list[str] | None = None,
+) -> pd.DataFrame:
+    """Return the highest-scoring valid FPL squad within a £100m budget.
+
+    Args:
+        data: Candidate players and their squad attributes.
+        target_column: Column maximised by the optimiser.
+        excluded_player_names: Player names that cannot be selected.
+    """
     position_constraints = {
         "GKP": 2,
         "DEF": 5,
@@ -19,7 +29,8 @@ def create_optimal_team(data: pd.DataFrame, target_column: str) -> pd.DataFrame:
     if missing_columns:
         raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
-    players = data.reset_index(drop=True)
+    excluded_player_names = excluded_player_names or []
+    players = data.loc[~data["name"].isin(excluded_player_names)].reset_index(drop=True)
     if players[["position", "team", "value", target_column]].isna().any().any():
         raise ValueError("Position, team, value, and forecast columns cannot be null.")
 

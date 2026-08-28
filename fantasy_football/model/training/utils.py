@@ -14,7 +14,7 @@ def load_gw_data(season: str) -> pd.DataFrame:
     """
 
     data_path = (
-        Path.cwd().parents[4]
+        Path(__file__).resolve().parents[4]
         / "historic_data"
         / "data"
         / season

@@ -34,6 +34,13 @@ class LivePlayerData():
         except KeyError:
             return np.nan
 
+    def get_player_web_name(self, name: str) -> str:
+        """Return the player's short display name used by the FPL website."""
+        try:
+            return self.player_data[name]["web_name"]
+        except KeyError:
+            return np.nan
+
     def get_live_player_cost(self, name: str) -> int:
         """
         Get the live costs of players from the FPL API.
