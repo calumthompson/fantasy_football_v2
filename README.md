@@ -17,14 +17,22 @@ import fantasy_football
 ### FPL API
 
 The API client downloads the core FPL dataset and validates it before returning
-immutable Python objects. Incorrect types and undocumented fields raise an
-`FPLValidationError`.
+Pydantic models.
 
 ```python
-from fantasy_football.fpl_api import FPLClient
+from fantasy_football.fpl_api import FPLAPIClient
 
-data = FPLClient().get_bootstrap_data()
+snapshot = FPLAPIClient().load_full_snapshot()
 
-for player in data.elements[:5]:
-    print(player.web_name, player.price, player.total_points)
+for player in snapshot.players[:5]:
+    print(player.web_name, player.last_season_performance)
+```
+
+### Live upcoming-fixture predictions
+
+```python
+from fantasy_football.model import predict_upcoming_fixtures_from_fpl
+
+predictions = predict_upcoming_fixtures_from_fpl()
+print(predictions.head(20))
 ```

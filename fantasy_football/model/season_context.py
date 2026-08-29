@@ -3,6 +3,7 @@
 
 PROMOTED_TEAMS_BY_SEASON: dict[str, frozenset[str]] = {
     "2025-26": frozenset({"Burnley", "Leeds", "Sunderland"}),
+    "2026-27": frozenset({"Coventry City", "Hull City", "Ipswich Town"}),
 }
 
 

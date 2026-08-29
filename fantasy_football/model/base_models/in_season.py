@@ -1,11 +1,12 @@
 """Loading utilities for the selected in-season points model."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import joblib
 import pandas as pd
 
+from fantasy_football.fpl_api.models import Fixture, Player
 from fantasy_football.model.training.utils import (
     add_historic_fixture_rolling_features,
 )
@@ -64,18 +65,94 @@ def build_inseason_fixture_features(
     return result
 
 
+def build_api_inseason_features(
+    players: Sequence[Player],
+    fixtures: Sequence[Fixture],
+    gameweek_number: int,
+) -> pd.DataFrame:
+    """Build model features for every player-fixture in an upcoming gameweek."""
+    target_fixtures = [
+        fixture
+        for fixture in fixtures
+        if fixture.gameweek_number == gameweek_number and not fixture.started
+    ]
+    if not target_fixtures:
+        raise ValueError(f"No upcoming fixtures found for gameweek {gameweek_number}")
+
+    fixture_by_team: dict[int, list[Fixture]] = {}
+    for fixture in target_fixtures:
+        fixture_by_team.setdefault(fixture.home_team_season_id, []).append(fixture)
+        fixture_by_team.setdefault(fixture.away_team_season_id, []).append(fixture)
+
+    rows: list[dict[str, Any]] = []
+    for player in players:
+        for performance in player.this_season_performance:
+            performance_values = performance.model_dump()
+            rows.append(
+                {
+                    **performance_values,
+                    "element": performance.player_id,
+                    "fixture": performance.fixture_id,
+                    "GW": performance.gameweek_number,
+                    "is_prediction_row": False,
+                }
+            )
+
+        for fixture in fixture_by_team.get(player.team_season_id, []):
+            rows.append(
+                {
+                    "element": player.player_id,
+                    "fixture": fixture.fixture_id,
+                    "GW": gameweek_number,
+                    "is_prediction_row": True,
+                    **{
+                        feature: float("nan")
+                        for feature in DEFAULT_IN_SEASON_HISTORIC_FEATURES
+                    },
+                }
+            )
+
+    if not rows:
+        raise ValueError("No player history or upcoming player-fixture rows were built")
+
+    features = build_inseason_fixture_features(pd.DataFrame(rows))
+    return features.loc[features["is_prediction_row"]].reset_index(drop=True)
+
+
+class InSeasonPredictor:
+    """Load the selected artifact and score fixture-level rolling features."""
+
+    def __init__(
+        self, artifact_path: str | Path = DEFAULT_IN_SEASON_ARTIFACT_PATH
+    ) -> None:
+        artifact = joblib.load(Path(artifact_path))
+        artifact_model_name = artifact.get("model_name")
+        if artifact_model_name != SELECTED_IN_SEASON_MODEL_NAME:
+            raise ValueError(
+                "Expected the selected in-season model artifact to be "
+                f"{SELECTED_IN_SEASON_MODEL_NAME!r}, got {artifact_model_name!r}."
+            )
+        self.model = artifact["model"]
+        self.feature_columns = tuple(artifact["feature_columns"])
+
+    def predict(self, features: pd.DataFrame) -> pd.Series:
+        missing_columns = set(self.feature_columns) - set(features.columns)
+        if missing_columns:
+            raise ValueError(
+                f"Missing in-season model features: {sorted(missing_columns)}"
+            )
+        return pd.Series(
+            self.model.predict(features.loc[:, self.feature_columns]),
+            index=features.index,
+            name="inseason_model_score",
+        )
+
+
 def load_in_season_model(
     artifact_path: str | Path = DEFAULT_IN_SEASON_ARTIFACT_PATH,
 ) -> Any:
     """Load the unweighted CatBoost model selected by offline evaluation."""
-    artifact = joblib.load(Path(artifact_path))
-    artifact_model_name = artifact.get("model_name")
-    if artifact_model_name != SELECTED_IN_SEASON_MODEL_NAME:
-        raise ValueError(
-            "Expected the selected in-season model artifact to be "
-            f"{SELECTED_IN_SEASON_MODEL_NAME!r}, got {artifact_model_name!r}."
-        )
-    return artifact["model"]
+    return InSeasonPredictor(artifact_path).model
 
 
 def load_inseason_scores(

@@ -6,6 +6,8 @@ from typing import Any, Sequence
 import joblib
 import pandas as pd
 
+from fantasy_football.fpl_api.models import Player
+
 
 DEFAULT_CATEGORICAL_COLUMNS = ("position", "team")
 DEFAULT_NUMERIC_FEATURES = (
@@ -85,7 +87,7 @@ def build_season_features(
             "element": (
                 _latest_non_null(player_rows["element"])
                 if "element" in player_rows
-                else np.nan
+                else float("nan")
             ),
             "position": (
                 _latest_non_null(player_rows["position"])
@@ -107,6 +109,39 @@ def build_season_features(
         for column in available_features:
             values = pd.to_numeric(player_rows[column], errors="coerce")
             row[column] = values.sum(min_count=1)
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+def build_api_player_features(players: Sequence[Player]) -> pd.DataFrame:
+    """Convert live FPL player objects into pre-season model feature rows.
+
+    Players without a previous-season record are retained with missing numeric
+    features, allowing CatBoost to use its learned missing-value handling and
+    the player's current position and team.
+    """
+    rows: list[dict[str, Any]] = []
+    numeric_columns = ("start_cost", "end_cost", *DEFAULT_NUMERIC_FEATURES)
+
+    for player in players:
+        row: dict[str, Any] = {
+            "player_id": player.player_id,
+            "player_fixed_id": player.player_fixed_id,
+            "name": f"{player.first_name} {player.second_name}".strip(),
+            "web_name": player.web_name,
+            "position": player.position,
+            "team": player.team_name,
+            "previous_season": None,
+        }
+        if player.last_season_performance is None:
+            row.update({column: float("nan") for column in numeric_columns})
+        else:
+            previous_season = player.last_season_performance.model_dump(
+                exclude={"season_name", "player_fixed_id"}
+            )
+            row.update(previous_season)
+            row["previous_season"] = player.last_season_performance.season_name
         rows.append(row)
 
     return pd.DataFrame(rows)
