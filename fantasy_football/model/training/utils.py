@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 
@@ -20,6 +21,30 @@ def load_gw_data(season: str) -> pd.DataFrame:
         / season
         / "gws"
         / "merged_gw.csv"
+    )
+    return pd.read_csv(data_path)
+
+
+def load_team_data(season: str) -> pd.DataFrame:
+    """Load the historic FPL team lookup for a season."""
+    data_path = (
+        Path(__file__).resolve().parents[4]
+        / "historic_data"
+        / "data"
+        / season
+        / "teams.csv"
+    )
+    return pd.read_csv(data_path)
+
+
+def load_player_data(season: str) -> pd.DataFrame:
+    """Load the historic raw player lookup, including stable player codes."""
+    data_path = (
+        Path(__file__).resolve().parents[4]
+        / "historic_data"
+        / "data"
+        / season
+        / "players_raw.csv"
     )
     return pd.read_csv(data_path)
 
@@ -64,6 +89,68 @@ def add_historic_rolling_features(
         result[f"calc_{feature_column}_stdev_last_{window}_gw"] = (
             rolling.std(ddof=0).reset_index(level="element", drop=True)
         )
+
+    return result
+
+
+def add_historic_fixture_rolling_features(
+    df: pd.DataFrame,
+    feature_column: str,
+    windows: tuple[int, ...] = (1, 3, 6, 9, 12),
+) -> pd.DataFrame:
+    """Add prior-fixture rolling features without leaking within a gameweek.
+
+    The returned data remains at player-fixture grain. All fixtures belonging to
+    the same player and gameweek receive features calculated from fixtures in
+    strictly earlier gameweeks, matching the information available at the FPL
+    deadline. Fixtures from a completed double gameweek count separately in the
+    subsequent fixture history.
+    """
+    required_columns = {"element", "GW", "fixture", feature_column}
+    missing_columns = required_columns - set(df.columns)
+    if missing_columns:
+        raise ValueError(f"Missing fixture columns: {sorted(missing_columns)}")
+
+    unique_windows = tuple(dict.fromkeys(windows))
+    if any(window < 1 for window in unique_windows):
+        raise ValueError("Rolling windows must contain positive integers.")
+
+    result = df.sort_values(["element", "GW", "fixture"]).reset_index(drop=True)
+    feature_values = pd.to_numeric(
+        result[feature_column], errors="coerce"
+    ).to_numpy(dtype=float)
+    mean_columns = {
+        window: f"calc_{feature_column}_mean_last_{window}_fixtures"
+        for window in unique_windows
+    }
+    stdev_columns = {
+        window: f"calc_{feature_column}_stdev_last_{window}_fixtures"
+        for window in unique_windows
+    }
+    calculated_values = {
+        column: np.full(len(result), np.nan)
+        for column in (*mean_columns.values(), *stdev_columns.values())
+    }
+
+    for _, player_rows in result.groupby("element", sort=False):
+        prior_fixture_values: list[float] = []
+        for _, gameweek_rows in player_rows.groupby("GW", sort=True):
+            row_indices = gameweek_rows.index.to_numpy()
+            for window in unique_windows:
+                history = np.asarray(prior_fixture_values[-window:], dtype=float)
+                history = history[~np.isnan(history)]
+                if not len(history):
+                    continue
+                calculated_values[mean_columns[window]][row_indices] = history.mean()
+                calculated_values[stdev_columns[window]][row_indices] = history.std()
+
+            prior_fixture_values.extend(
+                feature_values[row_indices].tolist()
+            )
+
+    result = pd.concat(
+        [result, pd.DataFrame(calculated_values, index=result.index)], axis=1
+    )
 
     return result
 
