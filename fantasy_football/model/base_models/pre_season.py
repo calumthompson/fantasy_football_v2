@@ -1,17 +1,19 @@
-"""Feature engineering and inference for the pre-season points model."""
+"""API-compatible feature engineering and inference for the pre-season model."""
 
 from pathlib import Path
 from typing import Any, Sequence
 
 import joblib
-import numpy as np
 import pandas as pd
 
 
-DEFAULT_DECAY = 0.90
 DEFAULT_CATEGORICAL_COLUMNS = ("position", "team")
 DEFAULT_NUMERIC_FEATURES = (
+    "total_points",
+    "minutes",
     "assists",
+    "bonus",
+    "bps",
     "clean_sheets",
     "creativity",
     "goals_conceded",
@@ -23,17 +25,17 @@ DEFAULT_NUMERIC_FEATURES = (
     "penalties_saved",
     "red_cards",
     "saves",
-    "selected",
     "starts",
     "threat",
-    "transfers_balance",
-    "value",
     "yellow_cards",
     "clearances_blocks_interceptions",
     "defensive_contribution",
     "recoveries",
     "tackles",
-    "minutes",
+    "expected_goals",
+    "expected_assists",
+    "expected_goal_involvements",
+    "expected_goals_conceded",
 )
 DEFAULT_ARTIFACT_PATH = (
     Path(__file__).resolve().parents[1] / "artifacts" / "pre_season_model.joblib"
@@ -47,26 +49,26 @@ DEFAULT_PRESEASON_SCORES_PATH = (
 
 def _latest_non_null(series: pd.Series) -> Any:
     values = series.dropna()
-    return values.iloc[-1] if len(values) else np.nan
+    return values.iloc[-1] if len(values) else float("nan")
 
 
-def _decayed_mean(values: pd.Series, decay: float) -> float:
-    numeric_values = (
-        pd.to_numeric(values, errors="coerce").dropna().to_numpy(dtype=float)
-    )
-    if not len(numeric_values):
-        return np.nan
-    weights = decay ** np.arange(len(numeric_values) - 1, -1, -1)
-    return float(np.average(numeric_values, weights=weights))
+def _first_non_null(series: pd.Series) -> Any:
+    values = series.dropna()
+    return values.iloc[0] if len(values) else float("nan")
 
 
 def build_season_features(
     gameweeks: pd.DataFrame,
     feature_columns: Sequence[str] = DEFAULT_NUMERIC_FEATURES,
-    decay: float = DEFAULT_DECAY,
 ) -> pd.DataFrame:
-    """Aggregate one season of gameweek rows into one feature row per player."""
-    required_columns = {"name", "GW", "minutes"}
+    """Build fields reproducible from the FPL API ``history_past`` record.
+
+    Numeric performance fields are season totals. Start and end cost correspond
+    to the first and final available ``value`` in the season. Weekly means,
+    standard deviations and trends are deliberately excluded because the live
+    API does not expose the underlying historic fixture rows for past seasons.
+    """
+    required_columns = {"name", "GW", "value"}
     missing_columns = required_columns - set(gameweeks.columns)
     if missing_columns:
         raise ValueError(f"Missing gameweek columns: {sorted(missing_columns)}")
@@ -78,7 +80,6 @@ def build_season_features(
     rows: list[dict[str, Any]] = []
 
     for name, player_rows in data.groupby("name", sort=False):
-        appearances = player_rows.loc[player_rows["minutes"].fillna(0).gt(0)]
         row: dict[str, Any] = {
             "name": name,
             "element": (
@@ -96,19 +97,16 @@ def build_season_features(
                 if "team" in player_rows
                 else "__MISSING__"
             ),
-            "games_available": player_rows["GW"].nunique(),
-            "appearances": appearances["GW"].nunique(),
-            "minutes_sum": player_rows["minutes"].sum(),
+            "start_cost": _first_non_null(
+                pd.to_numeric(player_rows["value"], errors="coerce")
+            ),
+            "end_cost": _latest_non_null(
+                pd.to_numeric(player_rows["value"], errors="coerce")
+            ),
         }
         for column in available_features:
-            all_values = pd.to_numeric(player_rows[column], errors="coerce")
-            played_values = pd.to_numeric(appearances[column], errors="coerce")
-            row[f"{column}_sum"] = all_values.sum(min_count=1)
-            row[f"{column}_mean"] = played_values.mean()
-            row[f"{column}_std"] = played_values.std(ddof=0)
-            row[f"{column}_decayed_mean"] = _decayed_mean(
-                played_values, decay=decay
-            )
+            values = pd.to_numeric(player_rows[column], errors="coerce")
+            row[column] = values.sum(min_count=1)
         rows.append(row)
 
     return pd.DataFrame(rows)
