@@ -1,10 +1,10 @@
-from collections import deque
 import sys
+from collections import deque
 
 import streamlit as st
 from loguru import logger
 
-from fpl_api import FPLAPIClient, FPLSnapshot
+from fantasy_football.integrations.fpl_api import FPLAPIClient, FPLSnapshot
 
 
 @st.cache_data
@@ -42,7 +42,7 @@ if force_refresh:
 try:
     with st.spinner("Loading FPL data..."):
         fpl_data = refresh_fpl_data(manager_id)
-except Exception as error:
+except Exception as error:  # noqa: BLE001
     st.error(f"Unable to load FPL data: {error}")
     st.stop()
 

@@ -4,7 +4,7 @@ from typing import Protocol
 
 import pandas as pd
 
-from fpl_api import FPLAPIClient, FPLSnapshot
+from src.integrations.fpl_api import FPLAPIClient, FPLSnapshot
 from model.model.base_models.in_season import (
     InSeasonPredictor,
     build_api_inseason_features,

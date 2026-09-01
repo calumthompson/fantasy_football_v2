@@ -1,9 +1,4 @@
-from fpl_api.api_handler import (
-    FPLAPIClient,
-    FPLAPIError,
-    FPLParser,
-)
-from domain.models import (
+from fantasy_football.domain.models import (
     BootstrapDataRaw,
     Fixture,
     FPLSnapshot,
@@ -15,6 +10,11 @@ from domain.models import (
     PlayerPerformanceStats,
     PlayerSeasonPerformance,
     Team,
+)
+from fantasy_football.integrations.fpl_api.api_handler import (
+    FPLAPIClient,
+    FPLAPIError,
+    FPLParser,
 )
 
 __all__ = [
@@ -35,16 +35,17 @@ __all__ = [
 ]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     import sys
+
     from loguru import logger
-    
+
     logger.remove()
     logger.add(sys.stderr, level="INFO")
 
-    client = FPLAPIClient(manager_id = 9836874)
+    client = FPLAPIClient(manager_id=9836874)
 
     snapshot = client.load_snapshot()
 
-#%%
+# %%
