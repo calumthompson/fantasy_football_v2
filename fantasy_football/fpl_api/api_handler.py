@@ -1,32 +1,40 @@
-#%%
-import json
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
-from warnings import warn
 
 import requests
+from loguru import logger
 from pydantic import ValidationError
+from tqdm import tqdm
 
 from fantasy_football.fpl_api.models import (
-    FPLSnapshot,
+    BootstrapDataRaw,
     Fixture,
+    FPLSnapshot,
     GameWeek,
+    Manager,
+    ManagerTeamPicks,
     Player,
     PlayerFixturePerformance,
     PlayerSeasonPerformance,
     Team,
 )
 
+_API_ADDRESS = "https://fantasy.premierleague.com/api"
 
-_BOOTSTRAP_STATIC_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
-_FIXTURE_DATA_URL = "https://fantasy.premierleague.com/api/fixtures/"
-_PLAYER_DATA_URL = "https://fantasy.premierleague.com/api/element-summary/{element_id}/"
-_DEFAULT_EXAMPLE_DIR = Path(__file__).parent / "examples"
+_BOOTSTRAP_STATIC_URL = "{api_address}/bootstrap-static/"
+_FIXTURE_DATA_URL = "{api_address}/fixtures/"
+_PLAYER_DATA_URL = "{api_address}/element-summary/{player_id}/"
+
+_MANAGER_URL = "{api_address}/entry/{manager_id}/"
+_MANAGER_TEAM_URL = "{api_address}/entry/{manager_id}/event/{gameweek}/picks"
 
 
 class FPLAPIError(RuntimeError):
     """Raised when FPL data cannot be downloaded or parsed."""
+
+    def __init__(self, message: str) -> None:
+        logger.error(message)
+        super().__init__(message)
 
 
 class FPLParser:
@@ -61,6 +69,13 @@ class FPLParser:
             ]
         except (KeyError, TypeError, ValidationError) as error:
             raise FPLAPIError(f"Unable to parse FPL team data: {error}") from error
+
+    @staticmethod
+    def parse_position_names(records: list[dict[str, Any]]) -> dict[int, str]:
+        try:
+            return {record["id"]: record["singular_name_short"] for record in records}
+        except (KeyError, TypeError) as error:
+            raise FPLAPIError(f"Unable to parse FPL position data: {error}") from error
 
     @staticmethod
     def parse_player(
@@ -108,9 +123,7 @@ class FPLParser:
                     starts=record["starts"],
                     expected_goals=record["expected_goals"],
                     expected_assists=record["expected_assists"],
-                    expected_goal_involvements=record[
-                        "expected_goal_involvements"
-                    ],
+                    expected_goal_involvements=record["expected_goal_involvements"],
                     expected_goals_conceded=record["expected_goals_conceded"],
                     value=record["value"],
                     transfers_balance=record["transfers_balance"],
@@ -179,9 +192,7 @@ class FPLParser:
             creativity=record["creativity"],
             threat=record["threat"],
             ict_index=record["ict_index"],
-            clearances_blocks_interceptions=record[
-                "clearances_blocks_interceptions"
-            ],
+            clearances_blocks_interceptions=record["clearances_blocks_interceptions"],
             recoveries=record["recoveries"],
             tackles=record["tackles"],
             defensive_contribution=record["defensive_contribution"],
@@ -211,148 +222,191 @@ class FPLParser:
         except (KeyError, TypeError, ValidationError) as error:
             raise FPLAPIError(f"Unable to parse FPL fixture data: {error}") from error
 
+    @staticmethod
+    def parse_manager(record: dict[str, Any]) -> Manager:
+        try:
+            return Manager(
+                manager_id=record["id"],
+                most_recent_gameweek=record["current_event"],
+                current_points=record["summary_overall_points"],
+            )
+        except (KeyError, TypeError, ValidationError) as error:
+            raise FPLAPIError(f"Unable to parse FPL manager data: {error}") from error
+
+    @staticmethod
+    def parse_manager_team_picks(record: dict[str, Any]) -> ManagerTeamPicks:
+        try:
+            picks = record["picks"]
+            if not isinstance(picks, list) or not all(
+                isinstance(pick, dict) for pick in picks
+            ):
+                raise TypeError("picks must be a list of records")
+
+            captain_ids = [pick["element"] for pick in picks if pick["is_captain"]]
+            vice_captain_ids = [
+                pick["element"] for pick in picks if pick["is_vice_captain"]
+            ]
+            if len(captain_ids) != 1:
+                raise ValueError("manager picks must contain exactly one captain")
+            if len(vice_captain_ids) != 1:
+                raise ValueError("manager picks must contain exactly one vice-captain")
+
+            return ManagerTeamPicks(
+                selected_player_ids=[pick["element"] for pick in picks],
+                captain_player_id=captain_ids[0],
+                vice_captain_player_id=vice_captain_ids[0],
+            )
+        except (KeyError, TypeError, ValueError, ValidationError) as error:
+            raise FPLAPIError(
+                f"Unable to parse FPL manager team picks: {error}"
+            ) from error
+
 
 class FPLAPIClient:
     """Download FPL API data and return validated objects."""
 
     def __init__(
         self,
+        manager_id: int,
         timeout: float = 15.0,
         session: requests.Session | None = None,
         parser: FPLParser | None = None,
-        example_dir: Path | None = None,
     ) -> None:
         self._timeout = timeout
         self._session = session or requests.Session()
         self._parser = parser or FPLParser()
-        self._example_dir = example_dir or _DEFAULT_EXAMPLE_DIR
+        self.manager_id = manager_id
 
-    def _load_example_json(self, filename: str, api_error: Exception) -> Any:
-        example_path = self._example_dir / filename
-        try:
-            with example_path.open(encoding="utf-8") as example_file:
-                data = json.load(example_file)
-        except (OSError, ValueError) as example_error:
-            raise FPLAPIError(
-                f"Failed to fetch FPL API data and could not load fallback "
-                f"response {example_path}: {example_error}"
-            ) from api_error
-
-        warn(
-            f"FPL API unavailable; using example response {example_path}",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-        return data
-
-    def _get_json(self, url: str, fallback_filename: str) -> Any:
+    def _get_json(self, url: str) -> Any:
         try:
             response = self._session.get(url, timeout=self._timeout)
             response.raise_for_status()
             return response.json()
         except (requests.RequestException, ValueError) as error:
-            return self._load_example_json(fallback_filename, error)
+            raise FPLAPIError(
+                f"Failed to load FPL API data from {url}: {error}"
+            ) from error
 
-    def fetch_bootstrap(self) -> dict[str, Any]:
-        data = self._get_json(_BOOTSTRAP_STATIC_URL, "bootstrap-static.json")
-        if not isinstance(data, dict):
-            raise FPLAPIError("bootstrap-static returned an unexpected response shape")
-        return data
+    def fetch_bootstrap(self) -> BootstrapDataRaw:
+        data = self._get_json(_BOOTSTRAP_STATIC_URL.format(api_address=_API_ADDRESS))
+        try:
+            bootstrap = BootstrapDataRaw.model_validate(data)
+        except ValidationError as error:
+            raise FPLAPIError(f"Invalid FPL bootstrap data: {error}") from error
+        logger.info("Loaded FPL bootstrap data")
+        return bootstrap
 
     def fetch_fixtures(self) -> list[dict[str, Any]]:
-        data = self._get_json(_FIXTURE_DATA_URL, "fixtures.json")
+        data = self._get_json(_FIXTURE_DATA_URL.format(api_address=_API_ADDRESS))
         if not isinstance(data, list) or not all(isinstance(row, dict) for row in data):
             raise FPLAPIError("fixtures returned an unexpected response shape")
+        logger.info("Loaded {} FPL fixtures", len(data))
         return data
 
     def fetch_player_summary(self, player_id: int) -> dict[str, Any]:
         data = self._get_json(
-            _PLAYER_DATA_URL.format(element_id=player_id),
-            f"element-summary-{player_id}.json",
+            _PLAYER_DATA_URL.format(api_address=_API_ADDRESS, player_id=player_id)
         )
         if not isinstance(data, dict):
-            raise FPLAPIError("element-summary returned an unexpected response shape")
+            raise FPLAPIError(
+                f"element-summary for player {player_id} returned an unexpected response shape"
+            )
         return data
 
-    def load_players(self, bootstrap: dict[str, Any] | None = None) -> list[Player]:
+    def fetch_manager_data(self) -> dict[str, Any]:
+        data = self._get_json(
+            _MANAGER_URL.format(api_address=_API_ADDRESS, manager_id=self.manager_id)
+        )
+        if not isinstance(data, dict):
+            raise FPLAPIError(
+                f"Error loading manager data for manager {self.manager_id}"
+            )
+        return data
+
+    def fetch_manager_team_data(self, gameweek: int) -> dict[str, Any]:
+        data = self._get_json(
+            _MANAGER_TEAM_URL.format(
+                api_address=_API_ADDRESS, manager_id=self.manager_id, gameweek=gameweek
+            )
+        )
+        if not isinstance(data, dict):
+            raise FPLAPIError(
+                f"Error loading team data for manager {self.manager_id} gameweek {gameweek}"
+            )
+        return data
+
+    def _load_players(
+        self,
+        bootstrap_elements: list[dict[str, Any]],
+        teams: list[Team],
+        position_names: dict[int, str],
+    ) -> list[Player]:
         """Load every player with current and most recent completed-season history."""
 
-        bootstrap = bootstrap or self.fetch_bootstrap()
-        raw_players = bootstrap.get("elements")
-        raw_teams = bootstrap.get("teams")
-        raw_positions = bootstrap.get("element_types")
-        if not isinstance(raw_players, list):
-            raise FPLAPIError("bootstrap-static contains invalid player data")
-        if not isinstance(raw_teams, list):
-            raise FPLAPIError("bootstrap-static contains invalid team data")
-        if not isinstance(raw_positions, list):
-            raise FPLAPIError("bootstrap-static contains invalid position data")
-
-        try:
-            team_names = {record["id"]: record["name"] for record in raw_teams}
-            position_names = {
-                record["id"]: record["singular_name_short"]
-                for record in raw_positions
-            }
-        except (KeyError, TypeError) as error:
-            raise FPLAPIError(f"Unable to map FPL player metadata: {error}") from error
+        team_names = {team.team_season_id: team.name for team in teams}
 
         players: list[Player] = []
-        for player_record in raw_players:
+        for player_record in tqdm(
+            bootstrap_elements, desc="Loading FPL players", unit="player"
+        ):
             if not isinstance(player_record, dict) or "id" not in player_record:
                 raise FPLAPIError("bootstrap-static contains an invalid player record")
+
             summary = self.fetch_player_summary(player_record["id"])
-            players.append(
-                self._parser.parse_player(
-                    player_record,
-                    summary,
-                    team_names,
-                    position_names,
-                )
+
+            player = self._parser.parse_player(
+                player_record,
+                summary,
+                team_names,
+                position_names,
             )
+
+            players.append(player)
+            logger.debug("Loaded player data for {}", player.web_name)
         return players
 
-    def load_snapshot(self, include_players: bool = False) -> FPLSnapshot:
+    def load_snapshot(self) -> FPLSnapshot:
+
+        started_at = datetime.now(UTC)
+
+        # Load and parse bootstrap data
         bootstrap = self.fetch_bootstrap()
-        raw_gameweeks = bootstrap.get("events")
-        if not isinstance(raw_gameweeks, list) or not all(
-            isinstance(row, dict) for row in raw_gameweeks
-        ):
-            raise FPLAPIError("bootstrap-static contains invalid gameweek data")
+        teams = self._parser.parse_teams(bootstrap.teams)
+        gameweeks = self._parser.parse_gameweeks(bootstrap.events)
+        position_names = self._parser.parse_position_names(bootstrap.element_types)
 
-        raw_teams = bootstrap.get("teams")
-        if not isinstance(raw_teams, list) or not all(
-            isinstance(row, dict) for row in raw_teams
-        ):
-            raise FPLAPIError("bootstrap-static contains invalid team data")
-
+        # Load and parse fixture data
         raw_fixtures = self.fetch_fixtures()
-        return FPLSnapshot(
-            retrieved_at=datetime.now(UTC),
-            gameweeks=self._parser.parse_gameweeks(raw_gameweeks),
-            teams=self._parser.parse_teams(raw_teams),
-            fixtures=self._parser.parse_fixtures(raw_fixtures),
-            players=self.load_players(bootstrap) if include_players else [],
+        fixtures = self._parser.parse_fixtures(raw_fixtures)
+
+        # Load and parse player performance data
+        players = self._load_players(
+            bootstrap.elements,
+            teams,
+            position_names,
         )
 
-    def load_full_snapshot(self) -> FPLSnapshot:
-        """Load gameweeks, teams, fixtures and every player's histories."""
+        # Load manager data
+        manager = self._parser.parse_manager(self.fetch_manager_data())
 
-        return self.load_snapshot(include_players=True)
+        # Load ids of the managers current team
+        manager_team_picks = self._parser.parse_manager_team_picks(
+            self.fetch_manager_team_data(manager.most_recent_gameweek)
+        )
 
-    def execute(self) -> FPLSnapshot:
-        """Compatibility entry point; prefer ``load_snapshot`` in new code."""
+        retrieved_at = datetime.now(UTC)
+        time_to_complete = retrieved_at - started_at
 
-        return self.load_snapshot()
+        logger.info(f"FPL data pulled from API in {time_to_complete.seconds}s")
 
-
-# Temporary compatibility for code written against the original class name.
-APIConnector = FPLAPIClient
-
-
-if __name__ == "__main__":
-    snapshot = FPLAPIClient().load_snapshot()
-    print(
-        f"Loaded {len(snapshot.gameweeks)} gameweeks, {len(snapshot.teams)} teams and "
-        f"{len(snapshot.fixtures)} fixtures at {snapshot.retrieved_at.isoformat()}"
-    )
+        return FPLSnapshot(
+            started_at=started_at,
+            retrieved_at=datetime.now(UTC),
+            time_to_complete=time_to_complete,
+            gameweeks=gameweeks,
+            teams=teams,
+            fixtures=fixtures,
+            players=players,
+            manager=manager,
+            current_manager_team_picks=manager_team_picks,
+        )

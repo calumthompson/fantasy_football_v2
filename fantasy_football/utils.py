@@ -23,7 +23,7 @@ def create_optimal_team(
 
     budget = 1000  # Player values are stored in tenths of a million pounds.
     max_players_per_team = 3
-    
+
     required_columns = {"name", "position", "team", "value", target_column}
     missing_columns = required_columns.difference(data.columns)
     if missing_columns:
@@ -41,13 +41,11 @@ def create_optimal_team(
     }
 
     problem += pulp.lpSum(
-        selected[index] * players.at[index, target_column]
-        for index in players.index
+        selected[index] * players.at[index, target_column] for index in players.index
     )
     problem += (
         pulp.lpSum(
-            selected[index] * players.at[index, "value"]
-            for index in players.index
+            selected[index] * players.at[index, "value"] for index in players.index
         )
         <= budget
     )
@@ -55,8 +53,7 @@ def create_optimal_team(
     for position, required_count in position_constraints.items():
         matching_players = players.index[players["position"] == position]
         problem += (
-            pulp.lpSum(selected[index] for index in matching_players)
-            == required_count
+            pulp.lpSum(selected[index] for index in matching_players) == required_count
         )
 
     for team in players["team"].unique():

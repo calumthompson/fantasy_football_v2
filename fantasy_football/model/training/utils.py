@@ -50,7 +50,11 @@ def load_player_data(season: str) -> pd.DataFrame:
 
 
 def create_lagged_feature(
-    df: pd.DataFrame, feature_name: str, lag: int, agg_func: str,  groupby_cols: list = ['element']
+    df: pd.DataFrame,
+    feature_name: str,
+    lag: int,
+    agg_func: str,
+    groupby_cols: list = ["element"],
 ) -> pd.DataFrame:
     """
     Create a lagged feature in the DataFrame.
@@ -65,9 +69,7 @@ def create_lagged_feature(
         pd.DataFrame: DataFrame with the new lagged feature.
     """
     df = df.sort_values(groupby_cols + ["GW"])
-    df[f"{feature_name}_lag_{lag}"] = (
-        df.groupby(groupby_cols)[feature_name].shift(lag)
-    )
+    df[f"{feature_name}_lag_{lag}"] = df.groupby(groupby_cols)[feature_name].shift(lag)
     return df
 
 
@@ -86,9 +88,9 @@ def add_historic_rolling_features(
         result[f"calc_{feature_column}_mean_last_{window}_gw"] = (
             rolling.mean().reset_index(level="element", drop=True)
         )
-        result[f"calc_{feature_column}_stdev_last_{window}_gw"] = (
-            rolling.std(ddof=0).reset_index(level="element", drop=True)
-        )
+        result[f"calc_{feature_column}_stdev_last_{window}_gw"] = rolling.std(
+            ddof=0
+        ).reset_index(level="element", drop=True)
 
     return result
 
@@ -116,9 +118,9 @@ def add_historic_fixture_rolling_features(
         raise ValueError("Rolling windows must contain positive integers.")
 
     result = df.sort_values(["element", "GW", "fixture"]).reset_index(drop=True)
-    feature_values = pd.to_numeric(
-        result[feature_column], errors="coerce"
-    ).to_numpy(dtype=float)
+    feature_values = pd.to_numeric(result[feature_column], errors="coerce").to_numpy(
+        dtype=float
+    )
     mean_columns = {
         window: f"calc_{feature_column}_mean_last_{window}_fixtures"
         for window in unique_windows
@@ -144,9 +146,7 @@ def add_historic_fixture_rolling_features(
                 calculated_values[mean_columns[window]][row_indices] = history.mean()
                 calculated_values[stdev_columns[window]][row_indices] = history.std()
 
-            prior_fixture_values.extend(
-                feature_values[row_indices].tolist()
-            )
+            prior_fixture_values.extend(feature_values[row_indices].tolist())
 
     result = pd.concat(
         [result, pd.DataFrame(calculated_values, index=result.index)], axis=1
@@ -159,14 +159,20 @@ def create_correlation_matrix(
     df: pd.DataFrame, columns: list[str], target_variable: str
 ) -> pd.DataFrame:
     """Return the correlation matrix for a variable and the target variable."""
-    return df[columns + [target_variable]].corr()[target_variable].sort_values(ascending=False)
+    return (
+        df[columns + [target_variable]]
+        .corr()[target_variable]
+        .sort_values(ascending=False)
+    )
 
 
 def plot_calculated_feature_correlations(df: pd.DataFrame):
     """Plot pairwise correlations between every calculated feature."""
     feature_columns = [column for column in df.columns if column.startswith("calc_")]
     if not feature_columns:
-        raise ValueError("DataFrame has no calculated feature columns prefixed 'calc_'.")
+        raise ValueError(
+            "DataFrame has no calculated feature columns prefixed 'calc_'."
+        )
 
     correlations = df[feature_columns].corr()
     feature_count = len(feature_columns)

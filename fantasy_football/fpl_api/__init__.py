@@ -1,31 +1,35 @@
 from fantasy_football.fpl_api.api_handler import (
-    APIConnector,
     FPLAPIClient,
     FPLAPIError,
     FPLParser,
 )
 from fantasy_football.fpl_api.models import (
-    FPLSnapshot,
+    BootstrapDataRaw,
     Fixture,
+    FPLSnapshot,
     GameWeek,
-    PlayerPerformanceStats,
+    Manager,
+    ManagerTeamPicks,
     Player,
     PlayerFixturePerformance,
+    PlayerPerformanceStats,
     PlayerSeasonPerformance,
     Team,
 )
 
 __all__ = [
-    "APIConnector",
+    "BootstrapDataRaw",
     "FPLAPIClient",
     "FPLAPIError",
     "FPLParser",
     "FPLSnapshot",
     "Fixture",
     "GameWeek",
-    "PlayerPerformanceStats",
+    "Manager",
+    "ManagerTeamPicks",
     "Player",
     "PlayerFixturePerformance",
+    "PlayerPerformanceStats",
     "PlayerSeasonPerformance",
     "Team",
 ]

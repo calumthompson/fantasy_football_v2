@@ -5,7 +5,6 @@ from pathlib import Path
 import joblib
 import pandas as pd
 
-
 DEFAULT_ENSEMBLE_ARTIFACT_PATH = (
     Path(__file__).resolve().parent / "artifacts" / "ensemble_model.joblib"
 )

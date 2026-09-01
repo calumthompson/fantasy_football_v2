@@ -1,7 +1,8 @@
 """Loading utilities for the selected in-season points model."""
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import joblib
 import pandas as pd
@@ -10,7 +11,6 @@ from fantasy_football.fpl_api.models import Fixture, Player
 from fantasy_football.model.training.utils import (
     add_historic_fixture_rolling_features,
 )
-
 
 SELECTED_IN_SEASON_MODEL_NAME = "Unweighted"
 DEFAULT_IN_SEASON_ARTIFACT_PATH = (

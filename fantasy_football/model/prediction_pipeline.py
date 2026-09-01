@@ -18,7 +18,7 @@ from fantasy_football.model.season_context import get_promoted_teams
 
 
 class SnapshotLoader(Protocol):
-    def load_full_snapshot(self) -> FPLSnapshot: ...
+    def load_snapshot(self) -> FPLSnapshot: ...
 
 
 def _next_gameweek(snapshot: FPLSnapshot) -> int:
@@ -68,7 +68,7 @@ def predict_upcoming_fixtures_from_fpl(
     inseason_predictor = inseason_predictor or InSeasonPredictor()
     ensemble_predictor = ensemble_predictor or EnsemblePredictor()
 
-    snapshot = client.load_full_snapshot()
+    snapshot = client.load_snapshot()
     if not snapshot.players:
         raise ValueError("The FPL snapshot contains no players to score")
 
@@ -100,9 +100,7 @@ def predict_upcoming_fixtures_from_fpl(
         fixture = fixtures[feature_row.fixture]
         was_home = player.team_season_id == fixture.home_team_season_id
         opponent_team_id = (
-            fixture.away_team_season_id
-            if was_home
-            else fixture.home_team_season_id
+            fixture.away_team_season_id if was_home else fixture.home_team_season_id
         )
         team_name = teams[player.team_season_id]
         opponent_name = teams[opponent_team_id]
@@ -120,9 +118,7 @@ def predict_upcoming_fixtures_from_fpl(
                 "team": team_name,
                 "opponent": opponent_name,
                 "was_home": int(was_home),
-                "preseason_model_score": player_preseason[
-                    "preseason_model_score"
-                ],
+                "preseason_model_score": player_preseason["preseason_model_score"],
                 "inseason_model_score": feature_row.inseason_model_score,
             }
         )

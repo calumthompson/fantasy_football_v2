@@ -1,13 +1,13 @@
 """API-compatible feature engineering and inference for the pre-season model."""
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import joblib
 import pandas as pd
 
 from fantasy_football.fpl_api.models import Player
-
 
 DEFAULT_CATEGORICAL_COLUMNS = ("position", "team")
 DEFAULT_NUMERIC_FEATURES = (

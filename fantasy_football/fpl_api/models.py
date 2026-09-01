@@ -1,6 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Any
 
 from pydantic import BaseModel, Field
+
+
+class BootstrapDataRaw(BaseModel):
+    """Required record collections returned by the FPL bootstrap endpoint."""
+
+    events: list[dict[str, Any]]
+    teams: list[dict[str, Any]]
+    elements: list[dict[str, Any]]
+    element_types: list[dict[str, Any]]
 
 
 class GameWeek(BaseModel):
@@ -24,6 +34,8 @@ class Fixture(BaseModel):
     started: bool | None
     away_team_season_id: int
     home_team_season_id: int
+    away_team_difficulty: int
+    home_team_difficulty: int
 
 
 class Team(BaseModel):
@@ -111,11 +123,27 @@ class Player(BaseModel):
     this_season_performance: list[PlayerFixturePerformance]
 
 
+class Manager(BaseModel):
+    manager_id: int
+    most_recent_gameweek: int
+    current_points: int
+
+
+class ManagerTeamPicks(BaseModel):
+    selected_player_ids: list[int]
+    captain_player_id: int
+    vice_captain_player_id: int
+
+
 class FPLSnapshot(BaseModel):
     """Validated FPL data retrieved as one logical snapshot."""
 
+    started_at: datetime
     retrieved_at: datetime
+    time_to_complete: timedelta
     gameweeks: list[GameWeek]
     teams: list[Team]
     fixtures: list[Fixture]
     players: list[Player] = Field(default_factory=list)
+    manager: Manager
+    current_manager_team_picks: ManagerTeamPicks
