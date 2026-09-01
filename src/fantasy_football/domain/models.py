@@ -131,6 +131,7 @@ class Manager(BaseModel):
 
 class ManagerTeamPicks(BaseModel):
     selected_player_ids: list[int]
+    substitute_player_ids: list[int]
     captain_player_id: int
     vice_captain_player_id: int
 
@@ -147,3 +148,24 @@ class FPLSnapshot(BaseModel):
     players: list[Player] = Field(default_factory=list)
     manager: Manager
     current_manager_team_picks: ManagerTeamPicks
+
+    def get_player_by_id(self, player_id: int) -> Player:
+        player = [player for player in self.players if player.player_id == player_id]
+
+        if len(player) > 1:
+            raise ValueError(f"Duplicate players found for ID {player_id}")
+        return player[0]
+
+    def get_current_team_picks(self) -> list[Player]:
+
+        return [
+            self.get_player_by_id(picked_id)
+            for picked_id in self.current_manager_team_picks.selected_player_ids
+        ]
+
+    def get_current_team_subs(self) -> list[Player]:
+
+        return [
+            self.get_player_by_id(picked_id)
+            for picked_id in self.current_manager_team_picks.substitute_player_ids
+        ]

@@ -1,4 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from threading import local
 from typing import Any
 
 import requests
@@ -248,13 +250,16 @@ class FPLParser:
             vice_captain_ids = [
                 pick["element"] for pick in picks if pick["is_vice_captain"]
             ]
+            if len(picks) != 15:
+                raise ValueError("More than 15 players picked by manager")
             if len(captain_ids) != 1:
                 raise ValueError("manager picks must contain exactly one captain")
             if len(vice_captain_ids) != 1:
                 raise ValueError("manager picks must contain exactly one vice-captain")
 
             return ManagerTeamPicks(
-                selected_player_ids=[pick["element"] for pick in picks],
+                selected_player_ids=[pick["element"] for pick in picks if pick["multiplier"] >= 1],
+                substitute_player_ids=[pick["element"] for pick in picks if pick["multiplier"] == 0],
                 captain_player_id=captain_ids[0],
                 vice_captain_player_id=vice_captain_ids[0],
             )
@@ -269,19 +274,35 @@ class FPLAPIClient:
 
     def __init__(
         self,
-        manager_id: int,
+        manager_id: int = 9836874,
         timeout: float = 15.0,
         session: requests.Session | None = None,
         parser: FPLParser | None = None,
+        max_workers: int = 8,
     ) -> None:
+        if max_workers < 1:
+            raise ValueError("max_workers must be at least 1")
+
         self._timeout = timeout
-        self._session = session or requests.Session()
+        self._session = session
+        self._thread_local = local()
         self._parser = parser or FPLParser()
+        self._max_workers = max_workers
         self.manager_id = manager_id
+
+    def _get_session(self) -> requests.Session:
+        """Return the injected session or one reusable session per worker thread."""
+
+        if self._session is not None:
+            return self._session
+
+        if not hasattr(self._thread_local, "session"):
+            self._thread_local.session = requests.Session()
+        return self._thread_local.session
 
     def _get_json(self, url: str) -> Any:
         try:
-            response = self._session.get(url, timeout=self._timeout)
+            response = self._get_session().get(url, timeout=self._timeout)
             response.raise_for_status()
             return response.json()
         except (requests.RequestException, ValueError) as error:
@@ -347,10 +368,7 @@ class FPLAPIClient:
 
         team_names = {team.team_season_id: team.name for team in teams}
 
-        players: list[Player] = []
-        for player_record in tqdm(
-            bootstrap_elements, desc="Loading FPL players", unit="player"
-        ):
+        def load_player(player_record: dict[str, Any]) -> Player:
             if not isinstance(player_record, dict) or "id" not in player_record:
                 raise FPLAPIError("bootstrap-static contains an invalid player record")
 
@@ -363,9 +381,18 @@ class FPLAPIClient:
                 position_names,
             )
 
-            players.append(player)
             logger.debug("Loaded player data for {}", player.web_name)
-        return players
+            return player
+
+        with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+            return list(
+                tqdm(
+                    executor.map(load_player, bootstrap_elements),
+                    total=len(bootstrap_elements),
+                    desc="Loading FPL players",
+                    unit="player",
+                )
+            )
 
     def load_snapshot(self) -> FPLSnapshot:
 

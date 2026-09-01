@@ -9,3 +9,4 @@ dist/
 .DS_Store
 .vscode
 fantasy_football/model/artifacts/*.joblib
+scratch_file.py
