@@ -6,7 +6,7 @@ from loguru import logger
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from fpl_api.models import (
+from domain.models import (
     BootstrapDataRaw,
     Fixture,
     FPLSnapshot,
@@ -216,6 +216,8 @@ class FPLParser:
                     started=record["started"],
                     away_team_season_id=record["team_a"],
                     home_team_season_id=record["team_h"],
+                    away_team_difficulty=record["team_a_difficulty"],
+                    home_team_difficulty=record["team_h_difficulty"]
                 )
                 for record in records
             ]

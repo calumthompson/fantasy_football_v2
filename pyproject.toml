@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Fantasy football analytics"
 authors = ["Calum Thompson"]
 readme = "README.md"
-packages = [{ include = "fantasy_football" }]
+packages = [{ include = "app"}, {include = "fpl_api"}, {include = "model" }]
 
 [tool.poetry.dependencies]
 python = "^3.14"

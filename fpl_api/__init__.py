@@ -3,7 +3,7 @@ from fpl_api.api_handler import (
     FPLAPIError,
     FPLParser,
 )
-from fpl_api.models import (
+from domain.models import (
     BootstrapDataRaw,
     Fixture,
     FPLSnapshot,
@@ -33,3 +33,18 @@ __all__ = [
     "PlayerSeasonPerformance",
     "Team",
 ]
+
+
+if __name__ == '__main__':
+
+    import sys
+    from loguru import logger
+    
+    logger.remove()
+    logger.add(sys.stderr, level="INFO")
+
+    client = FPLAPIClient(manager_id = 9836874)
+
+    snapshot = client.load_snapshot()
+
+#%%
