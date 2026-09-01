@@ -1,6 +1,9 @@
 #%%
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
+from warnings import warn
 
 import requests
 from pydantic import ValidationError
@@ -19,6 +22,7 @@ from fantasy_football.fpl_api.models import (
 _BOOTSTRAP_STATIC_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
 _FIXTURE_DATA_URL = "https://fantasy.premierleague.com/api/fixtures/"
 _PLAYER_DATA_URL = "https://fantasy.premierleague.com/api/element-summary/{element_id}/"
+_DEFAULT_EXAMPLE_DIR = Path(__file__).parent / "examples"
 
 
 class FPLAPIError(RuntimeError):
@@ -216,35 +220,56 @@ class FPLAPIClient:
         timeout: float = 15.0,
         session: requests.Session | None = None,
         parser: FPLParser | None = None,
+        example_dir: Path | None = None,
     ) -> None:
         self._timeout = timeout
         self._session = session or requests.Session()
         self._parser = parser or FPLParser()
+        self._example_dir = example_dir or _DEFAULT_EXAMPLE_DIR
 
-    def _get_json(self, url: str) -> Any:
+    def _load_example_json(self, filename: str, api_error: Exception) -> Any:
+        example_path = self._example_dir / filename
+        try:
+            with example_path.open(encoding="utf-8") as example_file:
+                data = json.load(example_file)
+        except (OSError, ValueError) as example_error:
+            raise FPLAPIError(
+                f"Failed to fetch FPL API data and could not load fallback "
+                f"response {example_path}: {example_error}"
+            ) from api_error
+
+        warn(
+            f"FPL API unavailable; using example response {example_path}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return data
+
+    def _get_json(self, url: str, fallback_filename: str) -> Any:
         try:
             response = self._session.get(url, timeout=self._timeout)
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as error:
-            raise FPLAPIError(f"Failed to fetch FPL API data from {url}: {error}") from error
-        except ValueError as error:
-            raise FPLAPIError(f"FPL API returned invalid JSON from {url}") from error
+        except (requests.RequestException, ValueError) as error:
+            return self._load_example_json(fallback_filename, error)
 
     def fetch_bootstrap(self) -> dict[str, Any]:
-        data = self._get_json(_BOOTSTRAP_STATIC_URL)
+        data = self._get_json(_BOOTSTRAP_STATIC_URL, "bootstrap-static.json")
         if not isinstance(data, dict):
             raise FPLAPIError("bootstrap-static returned an unexpected response shape")
         return data
 
     def fetch_fixtures(self) -> list[dict[str, Any]]:
-        data = self._get_json(_FIXTURE_DATA_URL)
+        data = self._get_json(_FIXTURE_DATA_URL, "fixtures.json")
         if not isinstance(data, list) or not all(isinstance(row, dict) for row in data):
             raise FPLAPIError("fixtures returned an unexpected response shape")
         return data
 
     def fetch_player_summary(self, player_id: int) -> dict[str, Any]:
-        data = self._get_json(_PLAYER_DATA_URL.format(element_id=player_id))
+        data = self._get_json(
+            _PLAYER_DATA_URL.format(element_id=player_id),
+            f"element-summary-{player_id}.json",
+        )
         if not isinstance(data, dict):
             raise FPLAPIError("element-summary returned an unexpected response shape")
         return data
