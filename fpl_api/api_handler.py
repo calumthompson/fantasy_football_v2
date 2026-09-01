@@ -6,7 +6,7 @@ from loguru import logger
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from fantasy_football.fpl_api.models import (
+from fpl_api.models import (
     BootstrapDataRaw,
     Fixture,
     FPLSnapshot,

@@ -7,8 +7,8 @@ from typing import Any
 import joblib
 import pandas as pd
 
-from fantasy_football.fpl_api.models import Fixture, Player
-from fantasy_football.model.training.utils import (
+from fpl_api.models import Fixture, Player
+from model.model.training.utils import (
     add_historic_fixture_rolling_features,
 )
 

@@ -7,7 +7,7 @@ from typing import Any
 import joblib
 import pandas as pd
 
-from fantasy_football.fpl_api.models import Player
+from fpl_api.models import Player
 
 DEFAULT_CATEGORICAL_COLUMNS = ("position", "team")
 DEFAULT_NUMERIC_FEATURES = (

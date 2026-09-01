@@ -1,9 +1,9 @@
-from fantasy_football.fpl_api.api_handler import (
+from fpl_api.api_handler import (
     FPLAPIClient,
     FPLAPIError,
     FPLParser,
 )
-from fantasy_football.fpl_api.models import (
+from fpl_api.models import (
     BootstrapDataRaw,
     Fixture,
     FPLSnapshot,

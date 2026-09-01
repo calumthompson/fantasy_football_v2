@@ -7,8 +7,8 @@ from loguru import logger
 logger.remove()
 logger.add(sys.stderr, level="INFO")
 
-from fantasy_football.fpl_api import FPLAPIClient
-from fantasy_football.model import predict_upcoming_fixtures_from_fpl
+from model.fpl_api import FPLAPIClient
+from model.model import predict_upcoming_fixtures_from_fpl
 
 
 if __name__ == '__main__':
