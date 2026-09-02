@@ -8,7 +8,7 @@ from loguru import logger
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from fantasy_football.domain.models import (
+from domain.models import (
     BootstrapDataRaw,
     Fixture,
     FPLSnapshot,
@@ -159,6 +159,7 @@ class FPLParser:
                 team_fixed_id=player_record["team_code"],
                 team_name=team_names[team_id],
                 position_id=position_id,
+                news = player_record["news"],
                 position=position_names[position_id],
                 last_season_performance=previous_season_history,
                 this_season_performance=history,

@@ -1,7 +1,7 @@
 import streamlit as st
 
-from fantasy_football.domain.models import FPLSnapshot
-from fantasy_football.integrations.fpl_api import FPLAPIClient
+from domain.models import FPLSnapshot
+from integrations.fpl_api import FPLAPIClient
 
 
 @st.cache_data

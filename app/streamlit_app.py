@@ -4,7 +4,7 @@ from data import refresh_fpl_data
 from logging_config import configure_logging
 from views.technical import render_technical
 
-from fantasy_football.settings import DEFAULT_MANAGER_ID
+from settings import DEFAULT_MANAGER_ID
 
 configure_logging()
 

@@ -1,4 +1,4 @@
-from fantasy_football.domain.models import (
+from domain.models import (
     BootstrapDataRaw,
     Fixture,
     FPLSnapshot,
@@ -11,7 +11,7 @@ from fantasy_football.domain.models import (
     PlayerSeasonPerformance,
     Team,
 )
-from fantasy_football.integrations.fpl_api.api_handler import (
+from integrations.fpl_api.api_handler import (
     FPLAPIClient,
     FPLAPIError,
     FPLParser,

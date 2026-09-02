@@ -119,6 +119,7 @@ class Player(BaseModel):
     team_name: str
     position_id: int
     position: str
+    news: str
     last_season_performance: PlayerSeasonPerformance | None
     this_season_performance: list[PlayerFixturePerformance]
 

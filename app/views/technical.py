@@ -1,7 +1,7 @@
 import streamlit as st
 from components.log_viewer import render_log_viewer
 
-from fantasy_football.domain.models import FPLSnapshot
+from domain.models import FPLSnapshot
 
 
 def render_technical(fpl_data: FPLSnapshot, force_refresh: bool) -> None:
