@@ -1,13 +1,11 @@
-from src.prediction.artifacts.schema import CatBoostArtifactSchema
-from src.prediction.base_model_runner import (
-    BaseCatBoostModelRunner,
-    BaseModelRunner,
+from prediction.artifacts.schema import CatBoostArtifactSchema
+from prediction.model.base_model import (
+    BaseCatBoostModel,
     PlayerFixturePrediction,
 )
 
 __all__ = [
-    "BaseCatBoostModelRunner",
-    "BaseModelRunner",
+    "BaseCatBoostModel",
     "CatBoostArtifactSchema",
     "PlayerFixturePrediction"
 ]

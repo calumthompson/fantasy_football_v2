@@ -52,3 +52,14 @@ def load_player_data(season: str) -> pd.DataFrame:
         / "players_raw.csv"
     )
     return pd.read_csv(data_path)
+
+
+def load_fixtures_data(season: str) -> pd.DataFrame:
+
+    data_path = (
+        _TRAINING_DATA_REPO_ADDRESS
+        / "data"
+        / season
+        / "fixtures.csv"
+    )
+    return pd.read_csv(data_path)
