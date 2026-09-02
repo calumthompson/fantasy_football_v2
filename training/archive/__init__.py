@@ -1,4 +1,4 @@
-from training.model.prediction_pipeline import (
+from training.archive.prediction_pipeline import (
     predict_upcoming_fixtures_from_fpl,
 )
 

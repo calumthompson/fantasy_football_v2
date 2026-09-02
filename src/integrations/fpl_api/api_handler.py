@@ -5,21 +5,16 @@ from typing import Any
 
 import requests
 from loguru import logger
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from tqdm import tqdm
 
+from domain.gameweek import Fixture, GameWeek
+from domain.manager import Manager, ManagerTeamPicks
 from domain.models import (
-    BootstrapDataRaw,
-    Fixture,
-    FPLSnapshot,
-    GameWeek,
-    Manager,
-    ManagerTeamPicks,
-    Player,
-    PlayerFixturePerformance,
-    PlayerSeasonPerformance,
     Team,
 )
+from domain.player import Player, PlayerFixturePerformance, PlayerSeasonPerformance
+from domain.snapshot import FPLSnapshot
 
 _API_ADDRESS = "https://fantasy.premierleague.com/api"
 
@@ -159,7 +154,7 @@ class FPLParser:
                 team_fixed_id=player_record["team_code"],
                 team_name=team_names[team_id],
                 position_id=position_id,
-                news = player_record["news"],
+                news=player_record["news"],
                 position=position_names[position_id],
                 last_season_performance=previous_season_history,
                 this_season_performance=history,
@@ -259,8 +254,12 @@ class FPLParser:
                 raise ValueError("manager picks must contain exactly one vice-captain")
 
             return ManagerTeamPicks(
-                selected_player_ids=[pick["element"] for pick in picks if pick["multiplier"] >= 1],
-                substitute_player_ids=[pick["element"] for pick in picks if pick["multiplier"] == 0],
+                selected_player_ids=[
+                    pick["element"] for pick in picks if pick["multiplier"] >= 1
+                ],
+                substitute_player_ids=[
+                    pick["element"] for pick in picks if pick["multiplier"] == 0
+                ],
                 captain_player_id=captain_ids[0],
                 vice_captain_player_id=vice_captain_ids[0],
             )
@@ -268,6 +267,15 @@ class FPLParser:
             raise FPLAPIError(
                 f"Unable to parse FPL manager team picks: {error}"
             ) from error
+
+
+class BootstrapDataRaw(BaseModel):
+    """Required record collections returned by the FPL bootstrap endpoint."""
+
+    events: list[dict[str, Any]]
+    teams: list[dict[str, Any]]
+    elements: list[dict[str, Any]]
+    element_types: list[dict[str, Any]]
 
 
 class FPLAPIClient:

@@ -1,8 +1,6 @@
 from domain.gameweek import Fixture, GameWeek
 from domain.manager import Manager, ManagerTeamPicks
-from domain.models import (
-    Team,
-)
+from domain.models import Team
 from domain.player import (
     Player,
     PlayerFixturePerformance,
@@ -10,18 +8,8 @@ from domain.player import (
     PlayerSeasonPerformance,
 )
 from domain.snapshot import FPLSnapshot
-from integrations.fpl_api.api_handler import (
-    BootstrapDataRaw,
-    FPLAPIClient,
-    FPLAPIError,
-    FPLParser,
-)
 
 __all__ = [
-    "BootstrapDataRaw",
-    "FPLAPIClient",
-    "FPLAPIError",
-    "FPLParser",
     "FPLSnapshot",
     "Fixture",
     "GameWeek",

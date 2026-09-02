@@ -1,6 +1,6 @@
 import streamlit as st
 
-from domain.models import FPLSnapshot
+from domain.snapshot import FPLSnapshot
 from integrations.fpl_api import FPLAPIClient
 
 

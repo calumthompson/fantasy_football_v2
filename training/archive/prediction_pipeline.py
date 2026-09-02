@@ -4,17 +4,18 @@ from typing import Protocol
 
 import pandas as pd
 
-from src.integrations.fpl_api import FPLAPIClient, FPLSnapshot
-from model.model.base_models.in_season import (
+from domain.snapshot import FPLSnapshot
+from src.integrations.fpl_api import FPLAPIClient
+from prediction.model.base_models.in_season import (
     InSeasonPredictor,
     build_api_inseason_features,
 )
-from model.model.base_models.pre_season import (
+from prediction.model.base_models.pre_season import (
     PreSeasonPredictor,
     build_api_player_features,
 )
-from model.model.ensemble import EnsemblePredictor
-from model.model.season_context import get_promoted_teams
+from prediction.model.ensemble import EnsemblePredictor
+from prediction.model.season_context import get_promoted_teams
 
 
 class SnapshotLoader(Protocol):

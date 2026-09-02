@@ -10,3 +10,5 @@ dist/
 .vscode
 fantasy_football/model/artifacts/*.joblib
 scratch_file.py
+.env
+catboost_info/

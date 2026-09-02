@@ -7,38 +7,9 @@ from typing import Any
 import joblib
 import pandas as pd
 
-from domain.models import Player
+from domain.player import Player
 
-DEFAULT_CATEGORICAL_COLUMNS = ("position", "team")
-DEFAULT_NUMERIC_FEATURES = (
-    "total_points",
-    "minutes",
-    "assists",
-    "bonus",
-    "bps",
-    "clean_sheets",
-    "creativity",
-    "goals_conceded",
-    "goals_scored",
-    "ict_index",
-    "influence",
-    "own_goals",
-    "penalties_missed",
-    "penalties_saved",
-    "red_cards",
-    "saves",
-    "starts",
-    "threat",
-    "yellow_cards",
-    "clearances_blocks_interceptions",
-    "defensive_contribution",
-    "recoveries",
-    "tackles",
-    "expected_goals",
-    "expected_assists",
-    "expected_goal_involvements",
-    "expected_goals_conceded",
-)
+
 DEFAULT_ARTIFACT_PATH = (
     Path(__file__).resolve().parents[1] / "artifacts" / "pre_season_model.joblib"
 )
