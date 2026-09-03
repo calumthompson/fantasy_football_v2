@@ -1,6 +1,6 @@
 import streamlit as st
 from components.log_viewer import clear_logs
-from data import refresh_fpl_data
+from app.services.app_data import load_app_data
 from logging_config import configure_logging
 from views.technical import render_technical
 
@@ -21,11 +21,11 @@ with st.sidebar:
 
 if force_refresh:
     clear_logs()
-    refresh_fpl_data.clear(manager_id)
+    load_app_data.clear(manager_id)
 
 try:
     with st.spinner("Loading FPL data..."):
-        fpl_data = refresh_fpl_data(manager_id)
+        fpl_data = load_app_data(manager_id)
 except Exception as error:  # noqa: BLE001
     st.error(f"Unable to load FPL data: {error}")
     st.stop()

@@ -1,0 +1,109 @@
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import ClassVar
+import joblib
+from catboost import CatBoost
+from pydantic import BaseModel
+import pandas as pd
+from datetime import datetime, UTC
+from dataclasses import dataclass
+
+from domain.snapshot import FPLSnapshot
+from prediction.artifacts.schema import CatBoostArtifactSchema
+
+
+def check_for_missing_columns_in_df(df: pd.DataFrame, required_columns: list[str]):
+        missing_columns = [
+            column
+            for column in required_columns
+            if column not in df.columns
+        ]
+
+        if missing_columns:
+            raise ValueError(
+                f"Provided DataFrame is missing required columns: {missing_columns}"
+            )
+
+
+class PlayerFixturePrediction(BaseModel):
+    player_id: int
+    fixture_id: int
+    predicted_points: float
+
+
+@dataclass
+class ModelResult:
+    model_name: str | None
+    scored_at: datetime
+    results: list[PlayerFixturePrediction]
+
+    def get_score(self, player_id: int, fixture_id: int) -> float:
+
+        scores = [result for result in self.results if (result.player_id == player_id) and (result.fixture_id == fixture_id)]
+
+        if len(scores) > 1:
+            raise ValueError({f"Duplicate scores found for player_id {player_id} at fixture {fixture_id}"})
+
+        return scores[0].predicted_points
+
+
+class BaseCatBoostModel(ABC):
+    """Load and validate the artifact shared by CatBoost model runners."""
+
+    artifact_type: ClassVar[type[CatBoostArtifactSchema]] = CatBoostArtifactSchema
+    REFERENCE_COLUMNS_REQUIRED = ['player_id', 'fixture_id']
+
+    def __init__(self, artifact_path: str | Path) -> None:
+        self.artifact_path = Path(artifact_path)
+        raw_artifact = joblib.load(self.artifact_path)
+        self.artifact = self.artifact_type.model_validate(raw_artifact)
+
+        # Keep this alias for concise use in concrete prediction runners.
+        self._model = self.artifact.model
+
+    @property
+    def model(self) -> CatBoost:
+        return self.artifact.model
+
+    @property
+    def feature_columns(self) -> list[str]:
+        return self.artifact.feature_columns
+
+    @property
+    def categorical_columns(self) -> list[str]:
+        return self.artifact.categorical_columns
+
+    @abstractmethod
+    def _generate_dataframe_from_snapshot(self, snapshot: FPLSnapshot) -> pd.DataFrame:
+        ...        
+    
+    def predict_for_snapshot(
+        self, snapshot: FPLSnapshot
+    ) -> ModelResult:
+
+        df = self._generate_dataframe_from_snapshot(snapshot)
+
+        check_for_missing_columns_in_df(df, self.REFERENCE_COLUMNS_REQUIRED + self.feature_columns)
+
+        df['predicted_points'] = self.model.predict(df[self.feature_columns])
+
+        results = [
+                PlayerFixturePrediction.model_validate(record)
+                for record in df[
+                    ["player_id", "fixture_id", "predicted_points"]
+                ].to_dict(orient="records")
+            ]
+
+        return ModelResult(
+            model_name=self.artifact.model_name,
+            scored_at=datetime.now(UTC),
+            results=results
+        )
+
+    def predict_for_dataframe(self, df: pd.DataFrame) -> pd.Series:
+
+        check_for_missing_columns_in_df(df, self.feature_columns)
+
+        return self.model.predict(df[self.feature_columns])
+
+        

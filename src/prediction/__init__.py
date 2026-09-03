@@ -1,5 +1,5 @@
 from prediction.artifacts.schema import CatBoostArtifactSchema
-from prediction.model.base_model import (
+from prediction.models.base_model import (
     BaseCatBoostModel,
     PlayerFixturePrediction,
 )

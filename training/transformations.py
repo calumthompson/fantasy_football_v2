@@ -172,8 +172,8 @@ def create_ensemble_training_df(
         season: str,
         pre_season: str,
 ) -> pd.DataFrame:
-    from prediction.model.in_season_model import in_season_model
-    from prediction.model.pre_season_model import pre_season_model
+    from prediction.models.in_season_model import in_season_model
+    from prediction.models.pre_season_model import pre_season_model
 
     fixture_history_df = (
         load_historic_player_fixture_data(season)
