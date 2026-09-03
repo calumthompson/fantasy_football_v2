@@ -184,19 +184,6 @@ def create_ensemble_training_df(
         .reset_index(drop=True)
     )
 
-    fixture_history_df = fixture_history_df[
-        [
-            "player_id",
-            "name",
-            "season",
-            "target_gw",
-            "fixture_id",
-            "position",
-            "was_home",
-            *NUMERIC_FEATURES,
-        ]
-    ]
-
     fixture_details_df = (
         load_fixtures_data(season)[
             ["id", "team_a_difficulty", "team_h_difficulty"]
@@ -268,10 +255,12 @@ def create_ensemble_training_df(
     fixture_details_for_ensemble_df = fixture_history_df[
         [
             "player_id",
+            "name",
+            "team",
+            "minutes",
             "season",
             "fixture_id",
             "target_gw",
-            "name",
             "was_home",
             "player_game_difficulty",
             "opponent_game_difficulty",
