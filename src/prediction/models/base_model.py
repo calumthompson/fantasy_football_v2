@@ -27,7 +27,7 @@ def check_for_missing_columns_in_df(df: pd.DataFrame, required_columns: list[str
 
 class PlayerFixturePrediction(BaseModel):
     player_id: int
-    fixture_id: int
+    fixture_id: int | None
     predicted_points: float
 
 
@@ -51,7 +51,7 @@ class BaseCatBoostModel(ABC):
     """Load and validate the artifact shared by CatBoost model runners."""
 
     artifact_type: ClassVar[type[CatBoostArtifactSchema]] = CatBoostArtifactSchema
-    REFERENCE_COLUMNS_REQUIRED = ['player_id', 'fixture_id']
+    REFERENCE_COLUMNS_REQUIRED = ['player_id']
 
     def __init__(self, artifact_path: str | Path) -> None:
         self.artifact_path = Path(artifact_path)
@@ -105,5 +105,3 @@ class BaseCatBoostModel(ABC):
         check_for_missing_columns_in_df(df, self.feature_columns)
 
         return self.model.predict(df[self.feature_columns])
-
-        
