@@ -1,21 +1,22 @@
 import streamlit as st
-from components.log_viewer import clear_logs
+from components.log_viewer import clear_logs, render_log_viewer
 from logging_config import configure_logging
 
-from app.components.current_team import render_all_players, render_current_team
-from app.components.transfer_recommendation import render_transfer_recommendation
-from app.components.player_lookup import render_player_lookup
-from app.services.app_data import load_app_data
 from app.components.app_data_inspector import render_app_data_inspector
-from components.log_viewer import render_log_viewer
-
+from app.components.current_team import render_all_players, render_current_team
+from app.components.fixtures import render_double_gameweeks
+from app.components.player_lookup import render_player_lookup
+from app.components.transfer_recommendation import render_transfer_recommendation
+from app.services.app_data import load_app_data
 from settings import DEFAULT_MANAGER_ID
 
 st.set_page_config(layout="wide")
 
 configure_logging()
 
-my_team, player_lookup, technical = st.tabs(["My team", "Player lookup", "Technical"])
+my_team, fixtures, player_lookup, technical = st.tabs(
+    ["My team", "Fixtures", "Player lookup", "Technical"]
+)
 
 with st.sidebar:
     manager_id = st.number_input("Manager ID", value=DEFAULT_MANAGER_ID)
@@ -43,6 +44,9 @@ if force_refresh:
 with my_team:
     render_current_team(app_data)
     render_transfer_recommendation(app_data)
+
+with fixtures:
+    render_double_gameweeks(app_data)
 
 with player_lookup:
     render_player_lookup(app_data)

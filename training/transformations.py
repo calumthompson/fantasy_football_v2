@@ -151,7 +151,9 @@ def create_ensemble_training_df(
     season: str,
     pre_season: str,
 ) -> pd.DataFrame:
-    from prediction.models.in_season_model import in_season_model
+    from prediction.models.in_season_model import ROLLING_FEATURES, in_season_model
+    from prediction.models.minutes_model import minutes_model
+    from prediction.models.played_in_game_model import played_in_game_model
     from prediction.models.pre_season_model import pre_season_model
 
     fixture_history_df = (
@@ -193,7 +195,7 @@ def create_ensemble_training_df(
     calculated_features_df = create_trended_calculations(
         fixture_history_df,
         rolling_windows=ROLLING_WINDOWS,
-        numeric_features=NUMERIC_FEATURES,
+        numeric_features=list(ROLLING_FEATURES),
     )
 
     # Each ensemble row represents the fixture being predicted. Shift the
@@ -208,8 +210,18 @@ def create_ensemble_training_df(
         axis=1,
     )
 
+    # The ensemble is scored at the end of the preceding gameweek.
+    fixture_history_df["current_gw"] = fixture_history_df["target_gw"] - 1
+    fixture_history_df["horizon"] = 1
+
     fixture_history_df["in_season_model_score"] = in_season_model.predict_for_dataframe(
         fixture_history_df
+    )
+    fixture_history_df["minutes_model_score"] = minutes_model.predict_for_dataframe(
+        fixture_history_df
+    )
+    fixture_history_df["played_in_game_model_score"] = (
+        played_in_game_model.predict_for_dataframe(fixture_history_df)
     )
 
     return fixture_history_df

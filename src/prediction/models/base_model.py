@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
-from loguru import logger
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import ClassVar
+
 import joblib
-from catboost import CatBoost
 import numpy as np
-from pydantic import BaseModel
 import pandas as pd
-from datetime import datetime, UTC
-from dataclasses import dataclass
+from catboost import CatBoost
+from loguru import logger
+from pydantic import BaseModel
 
 from domain.snapshot import FPLSnapshot
 from prediction.artifacts.schema import CatBoostArtifactSchema
@@ -58,6 +59,8 @@ class ModelResult:
         scores = [result for result in self.results if (result.player_id == player_id) and (result.fixture_id == fixture_id)]
 
         if len(scores) == 0:
+            if not error_on_missing:
+                return np.nan
             raise ValueError(f"No {self.model_name} score found for player_id {player_id} in fixture {fixture_id}")
 
         if len(scores) > 1:
@@ -94,6 +97,9 @@ class BaseCatBoostModel(ABC):
     @abstractmethod
     def _generate_dataframe_from_snapshot(self, snapshot: FPLSnapshot) -> pd.DataFrame:
         ...        
+
+    def _predict_dataframe(self, df: pd.DataFrame) -> np.ndarray:
+        return self.model.predict(df[self.feature_columns])
     
     def predict_for_snapshot(
         self, snapshot: FPLSnapshot
@@ -106,7 +112,7 @@ class BaseCatBoostModel(ABC):
 
         check_for_missing_columns_in_df(df, self.feature_columns)
 
-        df['predicted_points'] = self.model.predict(df[self.feature_columns])
+        df['predicted_points'] = self._predict_dataframe(df)
 
         if "fixture_id" in df.columns:
             columns_to_save = ["player_id", "fixture_id", "predicted_points"]
@@ -133,4 +139,4 @@ class BaseCatBoostModel(ABC):
 
         check_for_missing_columns_in_df(df, self.feature_columns)
 
-        return self.model.predict(df[self.feature_columns])
+        return self._predict_dataframe(df)

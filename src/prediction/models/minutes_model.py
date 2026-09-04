@@ -1,0 +1,4 @@
+from prediction.artifacts.io import MINUTES_ARTIFACT_PATH
+from prediction.models.availability_model import AvailabilityModelRunner
+
+minutes_model = AvailabilityModelRunner(artifact_path=MINUTES_ARTIFACT_PATH)

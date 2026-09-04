@@ -22,6 +22,9 @@ IN_SEASON_ARTIFACT_PATH = (
 MINUTES_ARTIFACT_PATH = (
     ARTIFACT_DIRECTORY / "minutes_model.joblib"
 )
+PLAYED_IN_GAME_ARTIFACT_PATH = (
+    ARTIFACT_DIRECTORY / "played_in_game_model.joblib"
+)
 ENSEMBLE_ARTIFACT_PATH = (
     ARTIFACT_DIRECTORY / "ensemble_model.joblib"
 )
