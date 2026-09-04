@@ -106,6 +106,7 @@ def create_trended_calculations(
     numeric_features=NUMERIC_FEATURES,
 ):
 
+    numeric_features = list(numeric_features)
     calculated_feature_dfs = []
 
     for window in rolling_windows:
@@ -151,7 +152,7 @@ def create_ensemble_training_df(
     season: str,
     pre_season: str,
 ) -> pd.DataFrame:
-    from prediction.models.in_season_model import in_season_model
+    from prediction.models.in_season_model import ROLLING_FEATURES, in_season_model
     from prediction.models.pre_season_model import pre_season_model
 
     fixture_history_df = (
@@ -193,7 +194,11 @@ def create_ensemble_training_df(
     calculated_features_df = create_trended_calculations(
         fixture_history_df,
         rolling_windows=ROLLING_WINDOWS,
-        numeric_features=NUMERIC_FEATURES,
+        # Match the feature source used by the production in-season runner.
+        # NUMERIC_FEATURES intentionally excludes snapshot-only fields such as
+        # selected, value and fixture difficulty because it is also used to
+        # construct pre-season totals.
+        numeric_features=ROLLING_FEATURES,
     )
 
     # Each ensemble row represents the fixture being predicted. Shift the
