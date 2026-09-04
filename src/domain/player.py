@@ -43,8 +43,8 @@ class PlayerFixturePerformance(PlayerPerformanceStats):
     opponent_team_season_id: int
     was_home: bool
     kickoff_time: datetime
-    home_team_score: int
-    away_team_score: int
+    home_team_score: int | None
+    away_team_score: int | None
     gameweek_number: int
     modified: bool
     value: int

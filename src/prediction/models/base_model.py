@@ -106,7 +106,7 @@ class BaseCatBoostModel(ABC):
 
         check_for_missing_columns_in_df(df, self.feature_columns)
 
-        df['predicted_points'] = self.model.predict(df[self.feature_columns])
+        df['predicted_points'] = self.predict_for_dataframe(df)
 
         if "fixture_id" in df.columns:
             columns_to_save = ["player_id", "fixture_id", "predicted_points"]
@@ -133,4 +133,8 @@ class BaseCatBoostModel(ABC):
 
         check_for_missing_columns_in_df(df, self.feature_columns)
 
-        return self.model.predict(df[self.feature_columns])
+        features = df[self.feature_columns].copy()
+        if "position" in features.columns:
+            # FPL's API uses GKP; historical training data uses GK.
+            features["position"] = features["position"].replace({"GKP": "GK"})
+        return self.model.predict(features)

@@ -128,6 +128,7 @@ def _render_recommended_lineup(app_data: AppData, transfer) -> None:
             {
                 "Role": "Starting XI",
                 "Player": player.web_name,
+                "Team": player.team_name,
                 "Position": player.position,
                 "Current cost": player.value / 10,
                 "Next opponent": _get_opponents(player, lineup.gameweek),
@@ -162,6 +163,7 @@ def _render_recommended_lineup(app_data: AppData, transfer) -> None:
             {
                 "Role": bench_role,
                 "Player": player.web_name,
+                "Team": player.team_name,
                 "Position": player.position,
                 "Current cost": player.value / 10,
                 "Next opponent": _get_opponents(player, lineup.gameweek),
@@ -187,6 +189,7 @@ def _render_recommended_lineup(app_data: AppData, transfer) -> None:
             {
                 "Role": "Transferred out",
                 "Player": outgoing_player.web_name,
+                "Team": outgoing_player.team_name,
                 "Position": outgoing_player.position,
                 "Current cost": outgoing_player.value / 10,
                 "Next opponent": _get_opponents(outgoing_player, lineup.gameweek),

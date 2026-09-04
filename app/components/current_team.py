@@ -91,6 +91,7 @@ def render_current_team(app_data: AppData) -> None:
         data_to_show.append(
             {
                 "Player": player.web_name,
+                "Team": player.team_name,
                 "Position": player.position,
                 "Selected": player_id in selected_player_ids,
                 "Captaincy": (
