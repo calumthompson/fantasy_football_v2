@@ -1,14 +1,14 @@
 import streamlit as st
-from components.log_viewer import clear_logs, render_log_viewer
+from app.components.technical.log_viewer import clear_logs, render_log_viewer
 from logging_config import configure_logging
 
-from app.components.app_data_inspector import render_app_data_inspector
-from app.components.current_team import render_all_players, render_current_team
-from app.components.fixtures import render_fixtures
+from app.components.technical.app_data_inspector import render_app_data_inspector
+from app.components.my_team.current_team import render_all_players, render_current_team
+from app.components.fixtures.fixtures import render_fixtures
 from app.components.gameweek_header import render_gameweek_header
-from app.components.model_features import render_model_features
-from app.components.player_lookup import render_player_lookup
-from app.components.transfer_recommendation import render_transfer_recommendation
+from app.components.technical.model_features import render_model_features
+from app.components.player_lookup.player_lookup import render_player_lookup
+from app.components.my_team.transfer_recommendation import render_transfer_recommendation
 from app.services.app_data import load_app_data
 from settings import DEFAULT_MANAGER_ID
 
@@ -58,5 +58,5 @@ with fixtures:
 
 with technical:
     render_model_features()
-    render_log_viewer(force_refresh)
     render_app_data_inspector(app_data)
+    render_log_viewer(force_refresh)

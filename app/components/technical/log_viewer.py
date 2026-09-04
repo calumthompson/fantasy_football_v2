@@ -6,6 +6,9 @@ def clear_logs() -> None:
 
 
 def render_log_viewer(force_refresh: bool) -> None:
+
+    st.subheader("Logs")
+
     with st.expander("Application logs", expanded=force_refresh):
         if st.button("Clear logs"):
             clear_logs()
