@@ -9,17 +9,6 @@ from prediction.models.in_season_model import in_season_model
 from prediction.models.pre_season_model import pre_season_model
 
 
-"""
-required columns = ['team',
- 'position',
- 'target_gw',
- 'was_home',
- 'player_game_difficulty',
- 'opponent_game_difficulty',
- 'pre_season_model_score',
- 'in_season_model_score']
-"""
-
 
 class EnsembleModelRunner(BaseCatBoostModel):
 

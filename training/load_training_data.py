@@ -1,9 +1,9 @@
 import os
-import pandas as pd 
-from pathlib import Path
-from dotenv import load_dotenv
 import re
+from pathlib import Path
 
+import pandas as pd
+from dotenv import load_dotenv
 
 load_dotenv()
 _TRAINING_DATA_REPO_ADDRESS = Path(os.environ["TRAINING_DATA_REPO_ADDRESS"])
@@ -28,8 +28,29 @@ def load_historic_player_fixture_data(season: str) -> pd.DataFrame:
         / "merged_gw.csv"
     )
 
-    fixture_data = pd.read_csv(data_path)
-    return fixture_data.rename(columns={"element": "player_id", "fixture": "fixture_id"})
+    fixture_data = pd.read_csv(data_path).rename(
+        columns={"element": "player_id", "fixture": "fixture_id"}
+    )
+    fixture_difficulties = load_fixture_data(season)[
+        ["id", "team_h_difficulty", "team_a_difficulty"]
+    ].rename(columns={"id": "fixture_id"})
+
+    fixture_data = fixture_data.merge(
+        fixture_difficulties,
+        on="fixture_id",
+        how="left",
+        validate="many_to_one",
+    )
+    fixture_data["player_game_difficulty"] = fixture_data[
+        "team_a_difficulty"
+    ].where(~fixture_data["was_home"], fixture_data["team_h_difficulty"])
+    fixture_data["opponent_game_difficulty"] = fixture_data[
+        "team_h_difficulty"
+    ].where(~fixture_data["was_home"], fixture_data["team_a_difficulty"])
+
+    return fixture_data.drop(
+        columns=["team_h_difficulty", "team_a_difficulty"]
+    )
 
 
 def load_team_data(season: str) -> pd.DataFrame:
@@ -54,7 +75,7 @@ def load_player_data(season: str) -> pd.DataFrame:
     return pd.read_csv(data_path)
 
 
-def load_fixtures_data(season: str) -> pd.DataFrame:
+def load_fixture_data(season: str) -> pd.DataFrame:
 
     data_path = (
         _TRAINING_DATA_REPO_ADDRESS

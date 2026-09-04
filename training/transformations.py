@@ -1,14 +1,10 @@
-import numpy as np
 import pandas as pd
 
 from training.config import (
     NUMERIC_FEATURES,
     ROLLING_WINDOWS,
 )
-from training.load_training_data import (
-    load_fixtures_data,
-    load_historic_player_fixture_data,
-)
+from training.load_training_data import load_historic_player_fixture_data
 
 
 def create_fixture_horizon_df(
@@ -160,34 +156,17 @@ def create_ensemble_training_df(
 
     fixture_history_df = (
         load_historic_player_fixture_data(season)
-        .rename(columns={"GW": "target_gw"})
+        .rename(
+            columns={
+                "GW": "target_gw",
+                "player_team_difficulty": "player_game_difficulty",
+                "opponent_team_difficulty": "opponent_game_difficulty",
+            }
+        )
         .assign(season=season)
         .drop_duplicates()
         .sort_values(["player_id", "season", "target_gw", "fixture_id"])
         .reset_index(drop=True)
-    )
-
-    fixture_details_df = load_fixtures_data(season)[
-        ["id", "team_a_difficulty", "team_h_difficulty"]
-    ].rename(columns={"id": "fixture_id"})
-
-    fixture_history_df = fixture_history_df.merge(
-        fixture_details_df,
-        on="fixture_id",
-        how="left",
-        validate="many_to_one",
-    )
-
-    fixture_history_df["player_game_difficulty"] = np.where(
-        fixture_history_df["was_home"],
-        fixture_history_df["team_h_difficulty"],
-        fixture_history_df["team_a_difficulty"],
-    )
-
-    fixture_history_df["opponent_game_difficulty"] = np.where(
-        fixture_history_df["was_home"],
-        fixture_history_df["team_a_difficulty"],
-        fixture_history_df["team_h_difficulty"],
     )
 
     pre_season_history_df = (

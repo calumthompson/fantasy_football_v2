@@ -52,6 +52,8 @@ class PlayerFixturePerformance(PlayerPerformanceStats):
     selected: int
     transfers_in: int
     transfers_out: int
+    player_game_difficulty: int
+    opponent_game_difficulty: int
 
 
 class PlayerSeasonPerformance(PlayerPerformanceStats):

@@ -35,6 +35,15 @@ def save_trained_catboost_model(
         save_path: Path | str
         ):
 
+    save_path = Path(save_path)
+
+    confirmation = input(
+        f"Type 'SAVE' to save {model_name or 'the model'} to {save_path}: "
+    )
+    if confirmation != "SAVE":
+        logger.info("Model save cancelled for %s", save_path)
+        return
+
     artifact = CatBoostArtifactSchema(
         model=model,
         feature_columns=feature_columns,
@@ -43,8 +52,6 @@ def save_trained_catboost_model(
         model_version=model_version,
         saved_at=datetime.now(UTC)
     )
-
-    save_path = Path(save_path)
 
     save_path.parent.mkdir(parents=True, exist_ok=True)
 

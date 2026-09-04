@@ -1,11 +1,14 @@
 import streamlit as st
 from components.log_viewer import clear_logs
 from logging_config import configure_logging
-from tabs.technical import render_technical
 
+from app.components.current_team import render_all_players, render_current_team
+from app.components.transfer_recommendation import render_transfer_recommendation
+from app.components.player_lookup import render_player_lookup
 from app.services.app_data import load_app_data
-from app.tabs.my_team import render_my_team
-from app.tabs.player_lookup import render_player_lookup_tab
+from app.components.app_data_inspector import render_app_data_inspector
+from components.log_viewer import render_log_viewer
+
 from settings import DEFAULT_MANAGER_ID
 
 st.set_page_config(layout="wide")
@@ -38,10 +41,13 @@ if force_refresh:
     st.success("FPL data refreshed")
 
 with my_team:
-    render_my_team(app_data)
+    render_current_team(app_data)
+    render_transfer_recommendation(app_data)
 
 with player_lookup:
-    render_player_lookup_tab(app_data)
+    render_player_lookup(app_data)
+    render_all_players(app_data)
 
 with technical:
-    render_technical(app_data, force_refresh)
+    render_log_viewer(force_refresh)
+    render_app_data_inspector(app_data)

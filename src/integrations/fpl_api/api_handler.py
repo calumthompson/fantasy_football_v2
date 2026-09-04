@@ -188,6 +188,16 @@ class FPLParser:
                     selected=record["selected"],
                     transfers_in=record["transfers_in"],
                     transfers_out=record["transfers_out"],
+                    player_game_difficulty=(
+                        fixtures_by_id[record["fixture"]].home_team_difficulty
+                        if record["was_home"]
+                        else fixtures_by_id[record["fixture"]].away_team_difficulty
+                    ),
+                    opponent_game_difficulty=(
+                        fixtures_by_id[record["fixture"]].away_team_difficulty
+                        if record["was_home"]
+                        else fixtures_by_id[record["fixture"]].home_team_difficulty
+                    ),
                 )
                 for record in summary["history"]
             ]

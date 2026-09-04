@@ -4,6 +4,39 @@ from domain.snapshot import FPLSnapshot
 from prediction.artifacts.io import IN_SEASON_ARTIFACT_PATH
 from prediction.models.base_model import BaseCatBoostModel
 
+ROLLING_WINDOWS = (1, 3, 6, 9, 12)
+
+ROLLING_FEATURES = (
+    "total_points",
+    "minutes",
+    "goals_scored",
+    "assists",
+    "clean_sheets",
+    "goals_conceded",
+    "own_goals",
+    "penalties_saved",
+    "penalties_missed",
+    "yellow_cards",
+    "red_cards",
+    "saves",
+    "bonus",
+    "bps",
+    "influence",
+    "creativity",
+    "threat",
+    "ict_index",
+    "starts",
+    "expected_goals",
+    "expected_assists",
+    "expected_goal_involvements",
+    "expected_goals_conceded",
+    "transfers_balance",
+    "selected",
+    "value",
+    "player_game_difficulty",
+    "opponent_game_difficulty",
+)
+
 
 class InSeasonModelRunner(BaseCatBoostModel):
 
@@ -19,13 +52,10 @@ class InSeasonModelRunner(BaseCatBoostModel):
                         "player_id": player.player_id,
                         "fixture_id": fixture.fixture_id,
                         "kickoff_time": fixture.kickoff_time.date(),
-                        "total_points": fixture.total_points,
-                        "minutes": fixture.minutes,
-                        "ict_index": fixture.ict_index,
-                        "creativity": fixture.creativity,
-                        "threat": fixture.threat,
-                        "assists": fixture.assists,
-                        "expected_goal_involvements": fixture.expected_goal_involvements,
+                        **{
+                            feature: getattr(fixture, feature)
+                            for feature in ROLLING_FEATURES
+                        },
                     }
                 )
 
@@ -33,73 +63,31 @@ class InSeasonModelRunner(BaseCatBoostModel):
 
         player_level_grouping = df.groupby("player_id", sort=False)
 
-        def rolling_metric(column: str, window: int, aggregation: str) -> pd.Series:
-            rolling_values = player_level_grouping[column].rolling(
+        calculated_features = {}
+        for window in ROLLING_WINDOWS:
+            rolling_values = player_level_grouping[list(ROLLING_FEATURES)].rolling(
                 window=window,
                 min_periods=1,
             )
-            if aggregation == "mean":
-                values = rolling_values.mean()
-            else:
-                values = rolling_values.std(ddof=0)
+            for aggregation, values in (
+                ("mean", rolling_values.mean()),
+                ("stdev", rolling_values.std(ddof=0)),
+            ):
+                values = values.reset_index(level="player_id", drop=True).sort_index()
+                for feature in ROLLING_FEATURES:
+                    calculated_features[
+                        f"calc_{feature}_{aggregation}_last_{window}_fixtures"
+                    ] = values[feature]
 
-            return values.reset_index(level="player_id", drop=True).sort_index()
-
-        df["calc_total_points_mean_last_1_fixtures"] = rolling_metric(
-            "total_points", 1, "mean"
-        )
-        df["calc_minutes_mean_last_1_fixtures"] = rolling_metric("minutes", 1, "mean")
-        df["calc_ict_index_mean_last_1_fixtures"] = rolling_metric(
-            "ict_index", 1, "mean"
-        )
-
-        df["calc_minutes_mean_last_3_fixtures"] = rolling_metric("minutes", 3, "mean")
-        df["calc_total_points_mean_last_3_fixtures"] = rolling_metric(
-            "total_points", 3, "mean"
-        )
-
-        df["calc_creativity_mean_last_6_fixtures"] = rolling_metric(
-            "creativity", 6, "mean"
-        )
-        df["calc_ict_index_mean_last_6_fixtures"] = rolling_metric(
-            "ict_index", 6, "mean"
-        )
-
-        df["calc_ict_index_mean_last_9_fixtures"] = rolling_metric(
-            "ict_index", 9, "mean"
-        )
-        df["calc_total_points_mean_last_9_fixtures"] = rolling_metric(
-            "total_points", 9, "mean"
-        )
-
-        df["calc_total_points_mean_last_12_fixtures"] = rolling_metric(
-            "total_points", 12, "mean"
-        )
-        df["calc_minutes_mean_last_12_fixtures"] = rolling_metric("minutes", 12, "mean")
-        df["calc_minutes_stdev_last_12_fixtures"] = rolling_metric(
-            "minutes", 12, "stdev"
-        )
-        df["calc_ict_index_mean_last_12_fixtures"] = rolling_metric(
-            "ict_index", 12, "mean"
-        )
-        df["calc_ict_index_stdev_last_12_fixtures"] = rolling_metric(
-            "ict_index", 12, "stdev"
-        )
-        df["calc_creativity_mean_last_12_fixtures"] = rolling_metric(
-            "creativity", 12, "mean"
-        )
-        df["calc_creativity_stdev_last_12_fixtures"] = rolling_metric(
-            "creativity", 12, "stdev"
-        )
-        df["calc_threat_stdev_last_12_fixtures"] = rolling_metric("threat", 12, "stdev")
-        df["calc_threat_mean_last_12_fixtures"] = rolling_metric("threat", 12, "mean")
-        df["calc_assists_mean_last_12_fixtures"] = rolling_metric("assists", 12, "mean")
-        df["calc_expected_goal_involvements_stdev_last_12_fixtures"] = rolling_metric(
-            "expected_goal_involvements", 12, "stdev"
-        )
+        df = pd.concat([df, pd.DataFrame(calculated_features, index=df.index)], axis=1)
 
         # We only want to score data as of the most recent fixture per player
-        return df.sort_values(['player_id', 'kickoff_time']).groupby('player_id').last().reset_index()
+        return (
+            df.sort_values(["player_id", "kickoff_time"])
+            .groupby("player_id")
+            .last()
+            .reset_index()
+        )
 
 
 in_season_model = InSeasonModelRunner(artifact_path=IN_SEASON_ARTIFACT_PATH)
