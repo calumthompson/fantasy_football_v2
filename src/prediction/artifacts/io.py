@@ -1,14 +1,14 @@
-from datetime import datetime, UTC 
+import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
+
 import joblib
 from catboost import CatBoost
-import logging
-
 from pydantic import ValidationError
 
 from prediction.artifacts.schema import CatBoostArtifactSchema
 
+logger = logging.getLogger(__name__)
 
 ARTIFACT_DIRECTORY = Path(__file__).resolve().parent / "trained_models"
 
@@ -19,6 +19,9 @@ PRE_SEASON_ARTIFACT_PATH = (
 IN_SEASON_ARTIFACT_PATH = (
     ARTIFACT_DIRECTORY / "in_season_model.joblib"
 )
+MINUTES_ARTIFACT_PATH = (
+    ARTIFACT_DIRECTORY / "minutes_model.joblib"
+)
 ENSEMBLE_ARTIFACT_PATH = (
     ARTIFACT_DIRECTORY / "ensemble_model.joblib"
 )
@@ -27,7 +30,7 @@ def save_trained_catboost_model(
         model: CatBoost,
         feature_columns: list[str],
         categorical_columns: list[str],
-        model_name: Optional[str],
+        model_name: str | None,
         model_version: str | None,
         save_path: Path | str
         ):
@@ -50,7 +53,7 @@ def save_trained_catboost_model(
         save_path,
     )
 
-    logging.info(f"Model {model_name} saved at {save_path}")
+    logger.info("Model %s saved at %s", model_name, save_path)
 
 
 def load_trained_catboost_model(

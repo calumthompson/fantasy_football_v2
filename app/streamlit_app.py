@@ -1,8 +1,9 @@
 import streamlit as st
+from app.tabs.my_team import render_my_team
 from components.log_viewer import clear_logs
 from app.services.app_data import load_app_data
 from logging_config import configure_logging
-from views.technical import render_technical
+from tabs.technical import render_technical
 
 from settings import DEFAULT_MANAGER_ID
 
@@ -25,7 +26,7 @@ if force_refresh:
 
 try:
     with st.spinner("Loading FPL data..."):
-        fpl_data = load_app_data(manager_id)
+        app_data = load_app_data(manager_id)
 except Exception as error:  # noqa: BLE001
     st.error(f"Unable to load FPL data: {error}")
     st.stop()
@@ -33,6 +34,8 @@ except Exception as error:  # noqa: BLE001
 if force_refresh:
     st.success("FPL data refreshed")
 
+with my_team:
+    render_my_team(app_data)
 
 with technical:
-    render_technical(fpl_data, force_refresh)
+    render_technical(app_data, force_refresh)

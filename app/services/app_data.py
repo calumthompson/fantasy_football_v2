@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from domain.snapshot import FPLSnapshot
 from integrations.fpl_api import FPLAPIClient
-from prediction.models.base_model import PlayerFixturePrediction
+from prediction.models.base_model import ModelResult
 from prediction.models.ensemble_model import ensemble_model
 
 
@@ -11,17 +11,18 @@ from prediction.models.ensemble_model import ensemble_model
 @dataclass
 class AppData:
     snapshot: FPLSnapshot
-    predictions: list[PlayerFixturePrediction]
+    predictions: ModelResult
 
 
 @st.cache_data
 def load_app_data(manager_id: int) -> AppData:
 
     snapshot = FPLAPIClient(manager_id).load_snapshot()
+    model_results = ensemble_model.predict_for_snapshot(snapshot)
 
     return AppData(
         snapshot = snapshot,
-        predictions=ensemble_model.predict_for_snapshot(snapshot)
+        predictions=model_results
     )
 
 

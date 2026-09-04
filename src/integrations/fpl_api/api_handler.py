@@ -13,7 +13,12 @@ from domain.manager import Manager, ManagerTeamPicks
 from domain.models import (
     Team,
 )
-from domain.player import Player, PlayerFixturePerformance, PlayerSeasonPerformance
+from domain.player import (
+    Player,
+    PlayerFixturePerformance,
+    PlayerSeasonPerformance,
+    UpcomingFixture,
+)
 from domain.snapshot import FPLSnapshot
 
 _API_ADDRESS = "https://fantasy.premierleague.com/api"
@@ -75,11 +80,67 @@ class FPLParser:
             raise FPLAPIError(f"Unable to parse FPL position data: {error}") from error
 
     @staticmethod
+    def _parse_upcoming_fixtures(
+        records: list[dict[str, Any]],
+        player_team_season_id: int,
+        fixtures_by_id: dict[int, Fixture],
+        team_names: dict[int, str],
+    ) -> list[UpcomingFixture]:
+        try:
+            upcoming_fixtures = []
+
+            for record in records:
+                fixture = fixtures_by_id[record["id"]]
+                is_home = record["is_home"]
+
+                expected_player_team_id = (
+                    fixture.home_team_season_id
+                    if is_home
+                    else fixture.away_team_season_id
+                )
+                if expected_player_team_id != player_team_season_id:
+                    raise ValueError(
+                        f"Fixture {fixture.fixture_id} does not contain player team "
+                        f"{player_team_season_id} as the expected "
+                        f"{'home' if is_home else 'away'} team"
+                    )
+
+                if is_home:
+                    opponent_team_season_id = fixture.away_team_season_id
+                    player_game_difficulty = fixture.home_team_difficulty
+                    opponent_game_difficulty = fixture.away_team_difficulty
+                else:
+                    opponent_team_season_id = fixture.home_team_season_id
+                    player_game_difficulty = fixture.away_team_difficulty
+                    opponent_game_difficulty = fixture.home_team_difficulty
+
+                upcoming_fixtures.append(
+                    UpcomingFixture(
+                        fixture_id=fixture.fixture_id,
+                        gameweek_number=fixture.gameweek_number,
+                        kickoff_time=fixture.kickoff_time,
+                        is_home=is_home,
+                        player_team_season_id=player_team_season_id,
+                        opponent_team_season_id=opponent_team_season_id,
+                        opponent_team_name=team_names[opponent_team_season_id],
+                        player_game_difficulty=player_game_difficulty,
+                        opponent_game_difficulty=opponent_game_difficulty,
+                    )
+                )
+
+            return upcoming_fixtures
+        except (KeyError, TypeError, ValueError, ValidationError) as error:
+            raise FPLAPIError(
+                f"Unable to parse upcoming FPL fixture data: {error}"
+            ) from error
+
+    @staticmethod
     def parse_player(
         player_record: dict[str, Any],
         summary: dict[str, Any],
         team_names: dict[int, str],
         position_names: dict[int, str],
+        fixtures_by_id: dict[int, Fixture],
     ) -> Player:
         try:
             history = [
@@ -158,6 +219,12 @@ class FPLParser:
                 position=position_names[position_id],
                 last_season_performance=previous_season_history,
                 this_season_performance=history,
+                upcoming_fixtures=FPLParser._parse_upcoming_fixtures(
+                    summary["fixtures"],
+                    player_team_season_id=team_id,
+                    fixtures_by_id=fixtures_by_id,
+                    team_names = team_names
+                ),
             )
         except (KeyError, TypeError, ValueError, ValidationError) as error:
             player_id = player_record.get("id", "unknown")
@@ -372,10 +439,12 @@ class FPLAPIClient:
         bootstrap_elements: list[dict[str, Any]],
         teams: list[Team],
         position_names: dict[int, str],
+        fixtures: list[Fixture],
     ) -> list[Player]:
         """Load every player with current and most recent completed-season history."""
 
         team_names = {team.team_season_id: team.name for team in teams}
+        fixtures_by_id = {fixture.fixture_id: fixture for fixture in fixtures}
 
         def load_player(player_record: dict[str, Any]) -> Player:
             if not isinstance(player_record, dict) or "id" not in player_record:
@@ -388,6 +457,7 @@ class FPLAPIClient:
                 summary,
                 team_names,
                 position_names,
+                fixtures_by_id,
             )
 
             logger.debug("Loaded player data for {}", player.web_name)
@@ -422,6 +492,7 @@ class FPLAPIClient:
             bootstrap.elements,
             teams,
             position_names,
+            fixtures,
         )
 
         # Load manager data
