@@ -5,6 +5,7 @@ class Manager(BaseModel):
     manager_id: int
     most_recent_gameweek: int
     current_points: int
+    bank: int
 
 
 class ManagerTeamPicks(BaseModel):

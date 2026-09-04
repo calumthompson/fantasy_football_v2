@@ -215,6 +215,7 @@ class FPLParser:
                 team_fixed_id=player_record["team_code"],
                 team_name=team_names[team_id],
                 position_id=position_id,
+                value=player_record["now_cost"],
                 news=player_record["news"],
                 position=position_names[position_id],
                 last_season_performance=previous_season_history,
@@ -296,6 +297,7 @@ class FPLParser:
                 manager_id=record["id"],
                 most_recent_gameweek=record["current_event"],
                 current_points=record["summary_overall_points"],
+                bank=record["last_deadline_bank"],
             )
         except (KeyError, TypeError, ValidationError) as error:
             raise FPLAPIError(f"Unable to parse FPL manager data: {error}") from error

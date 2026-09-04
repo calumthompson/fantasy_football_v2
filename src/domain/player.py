@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
@@ -90,31 +90,27 @@ class Player(BaseModel):
     team_name: str
     position_id: int
     position: str
+    value: int
     news: str
     last_season_performance: PlayerSeasonPerformance | None
     this_season_performance: list[PlayerFixturePerformance]
     upcoming_fixtures: list[UpcomingFixture]
 
     def get_most_recent_played_fixture(self) -> PlayerFixturePerformance | None:
-
-        if self.this_season_performance == []:
+        if not self.this_season_performance:
             return None
 
-        sorted_fixtures = sorted(self.this_season_performance, key=lambda x: x.kickoff_time)
-
-        most_recent = sorted_fixtures[0]
-
-        if most_recent.kickoff_time > datetime.now():
-            raise ValueError(f"Most recent fixture player for player_id {self.player_id} is in the future")
-
-        return most_recent
+        return max(
+            self.this_season_performance,
+            key=lambda performance: performance.kickoff_time,
+        )
 
     def get_last_week_total_points(self):
 
         last_week_performance = self.get_most_recent_played_fixture()
 
-        if last_week_performance is None: 
-            return None 
+        if last_week_performance is None:
+            return None
         return last_week_performance.total_points
 
     def get_next_fixture(self) -> UpcomingFixture:
@@ -123,7 +119,9 @@ class Player(BaseModel):
 
         most_recent = sorted_fixtures[0]
 
-        if most_recent.kickoff_time > datetime.now():
-            raise ValueError(f"Most recent fixture player for player_id {self.player_id} is in the future")
+        if most_recent.kickoff_time > datetime.now(UTC):
+            raise ValueError(
+                f"Most recent fixture player for player_id {self.player_id} is in the future"
+            )
 
         return most_recent

@@ -1,11 +1,14 @@
 import streamlit as st
-from app.tabs.my_team import render_my_team
 from components.log_viewer import clear_logs
-from app.services.app_data import load_app_data
 from logging_config import configure_logging
 from tabs.technical import render_technical
 
+from app.services.app_data import load_app_data
+from app.tabs.my_team import render_my_team
+from app.tabs.player_lookup import render_player_lookup_tab
 from settings import DEFAULT_MANAGER_ID
+
+st.set_page_config(layout="wide")
 
 configure_logging()
 
@@ -36,6 +39,9 @@ if force_refresh:
 
 with my_team:
     render_my_team(app_data)
+
+with player_lookup:
+    render_player_lookup_tab(app_data)
 
 with technical:
     render_technical(app_data, force_refresh)
