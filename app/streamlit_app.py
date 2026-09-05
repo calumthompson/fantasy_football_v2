@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Prefer deployed source over any older copy installed in site-packages.
 project_dir = Path(__file__).resolve().parents[1]
@@ -9,16 +9,19 @@ for import_dir in (project_dir, project_dir / "src"):
         sys.path.insert(0, import_path)
 
 import streamlit as st
-from app.components.technical.log_viewer import clear_logs, render_log_viewer
 from logging_config import configure_logging
 
-from app.components.technical.app_data_inspector import render_app_data_inspector
-from app.components.my_team.current_team import render_all_players, render_current_team
 from app.components.fixtures.fixtures import render_fixtures
 from app.components.gameweek_header import render_gameweek_header
-from app.components.technical.model_features import render_model_features
+from app.components.my_team.current_team import render_all_players, render_current_team
+from app.components.my_team.optimal_team import render_optimal_team
+from app.components.my_team.transfer_recommendation import (
+    render_transfer_recommendation,
+)
 from app.components.player_lookup.player_lookup import render_player_lookup
-from app.components.my_team.transfer_recommendation import render_transfer_recommendation
+from app.components.technical.app_data_inspector import render_app_data_inspector
+from app.components.technical.log_viewer import clear_logs, render_log_viewer
+from app.components.technical.model_features import render_model_features
 from app.services.app_data import get_deployed_revision, load_app_data
 from settings import DEFAULT_MANAGER_ID
 
@@ -82,6 +85,7 @@ my_team, fixtures, player_lookup, technical = st.tabs(
 with my_team:
     render_current_team(app_data)
     render_transfer_recommendation(app_data)
+    render_optimal_team(app_data)
 
 with player_lookup:
     render_player_lookup(app_data)
