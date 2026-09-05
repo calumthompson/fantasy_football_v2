@@ -128,6 +128,8 @@ def _render_recommended_lineup(app_data: AppData, transfer) -> None:
             {
                 "Role": "Starting XI",
                 "Player": player.web_name,
+                "Status": player.status,
+                "Next round playing chance": player.chance_of_playing_next_round,
                 "Team": player.team_name,
                 "Position": player.position,
                 "Current cost": player.value / 10,
@@ -163,6 +165,8 @@ def _render_recommended_lineup(app_data: AppData, transfer) -> None:
             {
                 "Role": bench_role,
                 "Player": player.web_name,
+                "Status": player.status,
+                "Next round playing chance": player.chance_of_playing_next_round,
                 "Team": player.team_name,
                 "Position": player.position,
                 "Current cost": player.value / 10,
@@ -189,6 +193,8 @@ def _render_recommended_lineup(app_data: AppData, transfer) -> None:
             {
                 "Role": "Transferred out",
                 "Player": outgoing_player.web_name,
+                "Status": outgoing_player.status,
+                "Next round playing chance": outgoing_player.chance_of_playing_next_round,
                 "Team": outgoing_player.team_name,
                 "Position": outgoing_player.position,
                 "Current cost": outgoing_player.value / 10,
@@ -213,6 +219,7 @@ def _render_recommended_lineup(app_data: AppData, transfer) -> None:
         use_container_width=True,
         height=(len(rows) + 1) * 35 + 3,
         column_config={
+            "Next round playing chance": st.column_config.NumberColumn(format="%d%%"),
             "Current cost": st.column_config.NumberColumn(format="£%.1fm"),
             "Forecast": st.column_config.NumberColumn(format="%.2f pts"),
         },

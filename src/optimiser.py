@@ -4,6 +4,7 @@ import pandas as pd
 import pulp
 
 from domain.snapshot import FPLSnapshot
+from prediction.availability import adjust_for_availability
 from prediction.models.base_model import ModelResult
 
 
@@ -63,10 +64,13 @@ def _forecast_player_points(
         for prediction in predictions.results
     }
     return {
-        player.player_id: sum(
-            prediction_lookup.get((player.player_id, fixture.fixture_id), 0.0)
-            for fixture in player.upcoming_fixtures
-            if fixture.gameweek_number in gameweeks
+        player.player_id: adjust_for_availability(
+            sum(
+                prediction_lookup.get((player.player_id, fixture.fixture_id), 0.0)
+                for fixture in player.upcoming_fixtures
+                if fixture.gameweek_number in gameweeks
+            ),
+            player.status,
         )
         for player in snapshot.players
     }

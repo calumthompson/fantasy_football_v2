@@ -229,6 +229,10 @@ class FPLParser:
                 position_id=position_id,
                 value=player_record["now_cost"],
                 news=player_record["news"],
+                status=player_record.get("status"),
+                chance_of_playing_next_round=player_record.get(
+                    "chance_of_playing_next_round"
+                ),
                 position=position_names[position_id],
                 last_season_performance=previous_season_history,
                 this_season_performance=history,

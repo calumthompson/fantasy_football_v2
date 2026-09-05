@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from app.services.app_data import AppData
+from prediction.availability import adjust_for_availability
 
 
 def _get_next_gameweek(snapshot) -> int | None:
@@ -43,7 +44,10 @@ def _forecast_points_by_gameweek(
                 (player.player_id, fixture.fixture_id),
                 0.0,
             )
-    return points
+    return {
+        gameweek: adjust_for_availability(score, player.status)
+        for gameweek, score in points.items()
+    }
 
 
 def render_current_team(app_data: AppData) -> None:
@@ -91,6 +95,8 @@ def render_current_team(app_data: AppData) -> None:
         data_to_show.append(
             {
                 "Player": player.web_name,
+                "Status": player.status,
+                "Next round playing chance": player.chance_of_playing_next_round,
                 "Team": player.team_name,
                 "Position": player.position,
                 "Selected": player_id in selected_player_ids,
@@ -131,6 +137,7 @@ def render_current_team(app_data: AppData) -> None:
         use_container_width=True,
         height=(len(current_team) + 1) * 35 + 3,
         column_config={
+            "Next round playing chance": st.column_config.NumberColumn(format="%d%%"),
             "Next week forecast": st.column_config.NumberColumn(format="%.2f"),
             "Next 3 mean": st.column_config.NumberColumn(format="%.2f"),
             "Next 5 mean": st.column_config.NumberColumn(format="%.2f"),
@@ -159,6 +166,8 @@ def render_all_players(app_data: AppData) -> None:
         ]
         row = {
             "Player": player.web_name,
+            "Status": player.status,
+            "Next round playing chance": player.chance_of_playing_next_round,
             "Position": player.position,
             "Next opponent": ", ".join(
                 fixture.opponent_team_name for fixture in next_fixtures
@@ -195,5 +204,8 @@ def render_all_players(app_data: AppData) -> None:
         all_players_forecast,
         hide_index=True,
         use_container_width=True,
-        column_config=mean_columns,
+        column_config={
+            **mean_columns,
+            "Next round playing chance": st.column_config.NumberColumn(format="%d%%"),
+        },
     )

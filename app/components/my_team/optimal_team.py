@@ -48,6 +48,8 @@ def render_optimal_team(app_data: AppData) -> None:
         [
             {
                 "name": player.web_name,
+                "Status": player.status,
+                "Next round playing chance": player.chance_of_playing_next_round,
                 "position": player.position,
                 "team": player.team_name,
                 "value": player.value,
@@ -98,6 +100,7 @@ def render_optimal_team(app_data: AppData) -> None:
         use_container_width=True,
         height=(len(squad) + 1) * 35 + 3,
         column_config={
+            "Next round playing chance": st.column_config.NumberColumn(format="%d%%"),
             "Cost": st.column_config.NumberColumn(format="£%.1fm"),
             "Forecast": st.column_config.NumberColumn(format="%.2f pts"),
         },

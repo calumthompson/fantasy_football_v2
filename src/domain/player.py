@@ -1,6 +1,16 @@
 from datetime import UTC, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
+
+
+PLAYER_STATUSES = {
+    "a": "Available",
+    "d": "Doubtful",
+    "i": "Injured",
+    "s": "Suspended",
+    "u": "Unavailable",
+    "n": "Not available",
+}
 
 
 class PlayerPerformanceStats(BaseModel):
@@ -94,9 +104,18 @@ class Player(BaseModel):
     position: str
     value: int
     news: str
+    status: str = "Unknown"
+    chance_of_playing_next_round: int | None = Field(default=None, ge=0, le=100)
     last_season_performance: PlayerSeasonPerformance | None
     this_season_performance: list[PlayerFixturePerformance]
     upcoming_fixtures: list[UpcomingFixture]
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def map_status(cls, value: str | None) -> str:
+        if value in PLAYER_STATUSES.values():
+            return value
+        return PLAYER_STATUSES.get(value, "Unknown")
 
     def get_most_recent_played_fixture(self) -> PlayerFixturePerformance | None:
         if not self.this_season_performance:
