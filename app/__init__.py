@@ -1,0 +1,1 @@
+"""Fantasy football Streamlit application."""

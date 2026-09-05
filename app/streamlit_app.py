@@ -2,10 +2,11 @@ from pathlib import Path
 import sys
 
 # Prefer deployed source over any older copy installed in site-packages.
-source_dir = str(Path(__file__).resolve().parents[1] / "src")
-if source_dir in sys.path:
-    sys.path.remove(source_dir)
-sys.path.insert(0, source_dir)
+project_dir = Path(__file__).resolve().parents[1]
+for import_dir in (project_dir, project_dir / "src"):
+    import_path = str(import_dir)
+    if import_path not in sys.path:
+        sys.path.insert(0, import_path)
 
 import streamlit as st
 from app.components.technical.log_viewer import clear_logs, render_log_viewer
