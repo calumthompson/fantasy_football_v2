@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 
 from domain.gameweek import Fixture, GameWeek
-from domain.manager import Manager, ManagerTeamPicks
+from domain.manager import Manager, ManagerTeamPicks, RivalTeam
 from domain.models import Team
 from domain.player import Player
 
@@ -20,6 +20,7 @@ class FPLSnapshot(BaseModel):
     players: list[Player] = Field(default_factory=list)
     manager: Manager
     current_manager_team_picks: ManagerTeamPicks
+    rival_teams: list[RivalTeam]
 
     def get_player_by_id(self, player_id: int) -> Player:
         player = [player for player in self.players if player.player_id == player_id]

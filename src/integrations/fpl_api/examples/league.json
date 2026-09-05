@@ -1,0 +1,128 @@
+{
+    "league": {
+        "admin_entry": 1886890,
+        "closed": false,
+        "code_privacy": "p",
+        "created": "2026-07-28T10:48:26.885472Z",
+        "cup_league": null,
+        "has_cup": true,
+        "id": 363151,
+        "league_type": "x",
+        "max_entries": null,
+        "name": "New Forest Challenge",
+        "rank": null,
+        "scoring": "c",
+        "start_event": 1
+    },
+    "standings": {
+        "has_next": false,
+        "page": 1,
+        "results": [
+            {
+                "club_badge_src": null,
+                "entry": 2209110,
+                "entry_name": "Veritas",
+                "event_total": 45,
+                "last_rank": 2,
+                "player_name": "Graham Gingell",
+                "rank": 1,
+                "rank_sort": 1,
+                "total": 191
+            },
+            {
+                "club_badge_src": null,
+                "entry": 2138643,
+                "entry_name": "Pedro\'s XV",
+                "event_total": 24,
+                "last_rank": 1,
+                "player_name": "Peter Loader",
+                "rank": 2,
+                "rank_sort": 2,
+                "total": 181
+            },
+            {
+                "club_badge_src": "https://fantasy.premierleague.com/gcs/plfpl-production-adobe-approved/plfpl-production/2379563/2ca90353-3652-41bf-82be-f050683605ec.png",
+                "entry": 2379563,
+                "entry_name": "Jerry Attricks",
+                "event_total": 43,
+                "last_rank": 5,
+                "player_name": "Jeremy Thompson",
+                "rank": 3,
+                "rank_sort": 3,
+                "total": 176
+            },
+            {
+                "club_badge_src": null,
+                "entry": 4465120,
+                "entry_name": "PortMoodyFogDuckers",
+                "event_total": 27,
+                "last_rank": 3,
+                "player_name": "Stefan Hull",
+                "rank": 4,
+                "rank_sort": 4,
+                "total": 176
+            },
+            {
+                "club_badge_src": null,
+                "entry": 1886890,
+                "entry_name": "Fire and the Rose",
+                "event_total": 32,
+                "last_rank": 4,
+                "player_name": "Sean Thompson",
+                "rank": 5,
+                "rank_sort": 5,
+                "total": 173
+            },
+            {
+                "club_badge_src": null,
+                "entry": 5407816,
+                "entry_name": "Rev\'s Renegades",
+                "event_total": 42,
+                "last_rank": 8,
+                "player_name": "Mike Brown",
+                "rank": 6,
+                "rank_sort": 6,
+                "total": 161
+            },
+            {
+                "club_badge_src": "https://fantasy.premierleague.com/gcs/plfpl-production-adobe-approved/plfpl-production/8574263/21ec4fc3-34f6-4933-9219-96210f01196a.png",
+                "entry": 8574263,
+                "entry_name": "Julie\'s Team",
+                "event_total": 11,
+                "last_rank": 6,
+                "player_name": "Julie Shaw",
+                "rank": 7,
+                "rank_sort": 7,
+                "total": 142
+            },
+            {
+                "club_badge_src": null,
+                "entry": 4202628,
+                "entry_name": "Rayter United",
+                "event_total": 14,
+                "last_rank": 7,
+                "player_name": "Peter Neal",
+                "rank": 8,
+                "rank_sort": 8,
+                "total": 140
+            },
+            {
+                "club_badge_src": null,
+                "entry": 9836874,
+                "entry_name": "Random Forest FC",
+                "event_total": 63,
+                "last_rank": 9,
+                "player_name": "Calum Thompson",
+                "rank": 9,
+                "rank_sort": 9,
+                "total": 132
+            }
+        ]
+    },
+    "last_updated_data": "2026-09-05T16:48:12Z",
+    "new_entries": {
+        "has_next": false,
+        "page": 1,
+        "results": []
+    }
+}

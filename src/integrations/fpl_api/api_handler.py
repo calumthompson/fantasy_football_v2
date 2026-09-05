@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 from tqdm import tqdm
 
 from domain.gameweek import Fixture, GameWeek
-from domain.manager import Manager, ManagerTeamPicks
+from domain.manager import Manager, ManagerTeamPicks, RivalTeam
 from domain.models import (
     Team,
 )
@@ -29,6 +29,8 @@ _PLAYER_DATA_URL = "{api_address}/element-summary/{player_id}/"
 
 _MANAGER_URL = "{api_address}/entry/{manager_id}/"
 _MANAGER_TEAM_URL = "{api_address}/entry/{manager_id}/event/{gameweek}/picks"
+
+_LEAGUE_URL = "{api_address}/leagues-classic/{league_id}/standings/"
 
 
 class FPLAPIError(RuntimeError):
@@ -308,6 +310,8 @@ class FPLParser:
                 most_recent_gameweek=record["current_event"],
                 current_points=record["summary_overall_points"],
                 bank=record["last_deadline_bank"],
+                team_name=record["name"],
+                entered_leagues=[league['id'] for league in record['leagues']['classic'] if league['league_type'] == 'x']
             )
         except (KeyError, TypeError, ValidationError) as error:
             raise FPLAPIError(f"Unable to parse FPL manager data: {error}") from error
@@ -347,6 +351,17 @@ class FPLParser:
                 f"Unable to parse FPL manager team picks: {error}"
             ) from error
 
+    @staticmethod
+    def parse_rival_teams_in_league(leagues_data: dict[str, Any]) -> list[RivalTeam]:
+        try:
+            return [
+                RivalTeam(
+                    manager_id = manager['entry'], 
+                    team_name =manager['entry_name']
+                    ) for manager in  leagues_data['standings']['results'] 
+                    ]
+        except:
+            raise Exception(f"Unable to parse FPL rival teams data")
 
 class BootstrapDataRaw(BaseModel):
     """Required record collections returned by the FPL bootstrap endpoint."""
@@ -446,6 +461,19 @@ class FPLAPIClient:
             )
         return data
 
+    def fetch_league_data(self, league_id: int) -> dict[str, Any]:
+        data = self._get_json(
+            _LEAGUE_URL.format(
+                api_address=_API_ADDRESS, league_id=league_id
+            )
+        )
+
+        if not isinstance(data, dict):
+            raise FPLAPIError(
+                f"Error loading league data for league {league_id}"
+            )
+        return data
+
     def _load_players(
         self,
         bootstrap_elements: list[dict[str, Any]],
@@ -515,6 +543,14 @@ class FPLAPIClient:
             self.fetch_manager_team_data(manager.most_recent_gameweek)
         )
 
+        # Load names of all rival teams of the manager
+        rival_teams = []
+
+        for league_id in manager.entered_leagues:
+            rival_teams += self._parser.parse_rival_teams_in_league(
+                    self.fetch_league_data(league_id)
+                )
+
         retrieved_at = datetime.now(UTC)
         time_to_complete = retrieved_at - started_at
 
@@ -530,4 +566,5 @@ class FPLAPIClient:
             players=players,
             manager=manager,
             current_manager_team_picks=manager_team_picks,
+            rival_teams = rival_teams
         )

@@ -16,9 +16,13 @@ st.set_page_config(layout="wide")
 
 configure_logging()
 
-with st.sidebar:
-    manager_id = st.number_input("Manager ID", value=DEFAULT_MANAGER_ID)
+# Initialise selected manager
+if "manager_id" not in st.session_state:
+    st.session_state.manager_id = DEFAULT_MANAGER_ID
 
+
+with st.sidebar:
+    manager_selector = st.container()
     force_refresh = st.button(
         "Refresh FPL data",
         type="primary",
@@ -27,14 +31,33 @@ with st.sidebar:
 
 if force_refresh:
     clear_logs()
-    load_app_data.clear(manager_id)
+    load_app_data.clear(st.session_state.manager_id)
 
 try:
     with st.spinner("Loading FPL data..."):
-        app_data = load_app_data(manager_id)
+        app_data = load_app_data(st.session_state.manager_id)
 except Exception as error:  # noqa: BLE001
     st.error(f"Unable to load FPL data: {error}")
     st.stop()
+
+# Manager selector
+manager_names = {
+    team.manager_id: team.team_name for team in app_data.snapshot.rival_teams
+}
+manager_names[app_data.snapshot.manager.manager_id] = app_data.snapshot.manager.team_name
+manager_ids = list(manager_names)
+
+with manager_selector:
+    selected_manager_id = st.selectbox(
+        "Manager",
+        options=manager_ids,
+        index=manager_ids.index(st.session_state.manager_id),
+        format_func=lambda manager_id: f"{manager_names[manager_id]} ({manager_id})",
+    )
+
+if selected_manager_id != st.session_state.manager_id:
+    st.session_state.manager_id = selected_manager_id
+    st.rerun()
 
 if force_refresh:
     st.success("FPL data refreshed")
