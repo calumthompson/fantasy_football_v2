@@ -9,7 +9,7 @@ from app.components.gameweek_header import render_gameweek_header
 from app.components.technical.model_features import render_model_features
 from app.components.player_lookup.player_lookup import render_player_lookup
 from app.components.my_team.transfer_recommendation import render_transfer_recommendation
-from app.services.app_data import load_app_data
+from app.services.app_data import get_deployed_revision, load_app_data
 from settings import DEFAULT_MANAGER_ID
 
 st.set_page_config(layout="wide")
@@ -29,13 +29,14 @@ with st.sidebar:
         use_container_width=True,
     )
 
-if force_refresh:
-    clear_logs()
-    load_app_data.clear(st.session_state.manager_id)
-
 try:
+    revision = get_deployed_revision()
+    if force_refresh:
+        clear_logs()
+        load_app_data.clear(st.session_state.manager_id, revision)
+
     with st.spinner("Loading FPL data..."):
-        app_data = load_app_data(st.session_state.manager_id)
+        app_data = load_app_data(st.session_state.manager_id, revision)
 except Exception as error:  # noqa: BLE001
     st.error(f"Unable to load FPL data: {error}")
     st.stop()
